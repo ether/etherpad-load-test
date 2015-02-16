@@ -1,11 +1,12 @@
+// Connect to the Socket Instance
 var socket = require('socket.io-client')('http://localhost:9001/');
 
-var newRev;
+var padState = {}; // The state of the pad, we hold this in memory
 
 socket.on('message', function(obj){
   var type = obj.type;
 
-  // Client is being told to disconnect, better drink my own piss.
+  // Client is being told to disconnect
   if(obj.disconnect){
     console.warn("Disconnecting", obj);
     return;
@@ -18,10 +19,10 @@ socket.on('message', function(obj){
 
   // Get the new Revision number
   else if(obj.type === 'COLLABROOM' && obj.data && obj.data.type === 'NEW_CHANGES'){
-    newRev = obj.data.newRev;
+    padState.newRev = obj.data.newRev;
   }
 
-  else{
+  else{ // Unhandled message
     console.log("Message from Server", obj);
   }
 });
@@ -29,14 +30,13 @@ socket.on('message', function(obj){
 function beginSendingMessages(obj){
   console.log("Beggining to send messages to the Pad");
 
-  // Send a message every X 
+  // Send a message every second
   setInterval(function(){
-    console.log("newRev", newRev);
 
     var msg = {
       "component": "pad",
       "type": 'USER_CHANGES',
-      "baseRev": newRev, // TODO
+      "baseRev": padState.newRev, // TODO
       "changeset": "Z:6l>1|8=6k*0+1$x", // TODO,
       "apool": { // TODO
         nextNum: 1,
