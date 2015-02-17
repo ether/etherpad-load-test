@@ -5,13 +5,48 @@ var AttributePool = require('./AttributePool');
 var padState = {}; // The state of the pad, we hold this in memory
 
 /* 
+# Etherpad CLI Client
 // Some docs on how this client might work..
-var pad = new etherpad("http://127.0.0.1:9001/p/test");
-pad.listen();
-pad.send("hello");
+var etherpad = require("etherpad-socketio-client");
+var pad = etherpad("http://127.0.0.1:9001/p/test");
+pad.watch(); // Watches the pad and outputs pad contents to the CLI
+pad.append("hello");
 pad.on("message", function(obj){
-
+  console.log("New message from Etherpad Server", message);
 });
+pad.on("newContents", function(atext){
+  console.log("\u001b[2J\u001b[0;0H");
+  console.log("Test Pad Contents", "\n"+atext.text);
+});
+
+# Etherpad Load Test CLI
+
+## Basic Load Test Example
+``etherpad-loadtest``
+
+## Specify the Etherpad instance
+``etherpad-loadtest http://127.0.0.1:9001``
+
+## Test Specific Etherpad Instance for 60 seconds``
+``etherpad-loadtest http://127.0.0.1:9001 -d 60``
+
+## Test a specific Pad
+``etherpad-loadtest http://127.0.0.1:9001/p/test``
+
+## 50 Lurkers, 10 authors, 10 pads (so 600 connections in total)
+``etherpad-loadtest http://127.0.0.1:9001 -l 50 -a 10 -p 10``
+Note ``-p`` Will create 10 random pads and assign -l and -a to each.  ``-p`` Cannot be used with an explicity pad ergo -p 1 is pointless
+
+## Parameters
+``-l`` number of lurkers.
+``-a`` number of active authors.
+``-p`` number of pads to test against.
+``-d`` duration in seconds to test for.  Default is unlimited.
+
+Basic load test will increase # of lurkers and authors every second until changesets are stopped processing
+At this point the # of lurkers and authors tells the admin how many people could use
+their instance
+
 */
 
 socket.on('message', function(obj){
@@ -27,7 +62,6 @@ socket.on('message', function(obj){
     padState.atext = obj.data.collab_client_vars.initialAttributedText;
     padState.apool = new AttributePool().fromJsonable(obj.data.collab_client_vars.apool);
     padState.baseRev = obj.data.collab_client_vars.rev;
-    // padState.apool = obj.data.collab_client_vars.apool;
     beginSendingMessages(obj);
   }
 
@@ -64,8 +98,8 @@ socket.on('message', function(obj){
 
     // Set the text
     padState.atext = baseAText;
-    console.log("new baseAText", baseAText);
-
+    console.log("\u001b[2J\u001b[0;0H");
+    console.log("Test Pad Contents", "\n"+baseAText.text);
   }
 
   else if(obj.type === 'COLLABROOM' && obj.data && obj.data.type === 'ACCEPT_COMMIT'){
@@ -95,9 +129,11 @@ function beginSendingMessages(obj){
 
   // Send a message every second
   setInterval(function(){
+    // Generate random string.
+    var randomString = generateRandomString();
 
-    // Create a new changeset
-    var newChangeset = Changeset.makeSplice(padState.atext.text, padState.atext.text.length-1, 0, "world");
+    // Create a new changeset using the makeSplice method
+    var newChangeset = Changeset.makeSplice(padState.atext.text, padState.atext.text.length, 0, randomString);
 
     // Create new AText with applied changeset
     var newAText = Changeset.applyToAText(newChangeset, padState.atext, padState.apool);
@@ -112,8 +148,8 @@ function beginSendingMessages(obj){
     var msg = {
       "component": "pad",
       "type": 'USER_CHANGES',
-      "baseRev": padState.baseRev, // TODO
-      "changeset": newChangeset, // TODO,
+      "baseRev": padState.baseRev,
+      "changeset": newChangeset,
       "apool": wireApool
     };
 
@@ -148,3 +184,14 @@ socket.on('connect', function(data){
   socket.json.send(msg);
 });
 
+
+function generateRandomString() {
+  var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+  var string_length = Math.floor(Math.random() *10);
+  var randomstring = '';
+  for (var i=0; i<string_length; i++) {
+    var rnum = Math.floor(Math.random() * chars.length);
+    randomstring += chars.substring(rnum,rnum+1);
+  }
+  return randomstring;
+}
