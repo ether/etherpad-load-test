@@ -1,5 +1,6 @@
 // Connect to the Socket Instance
 var socket = require('socket.io-client')('http://localhost:9001/');
+var Changeset = require('./Changeset');
 
 var padState = {}; // The state of the pad, we hold this in memory
 
