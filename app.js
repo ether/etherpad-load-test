@@ -1,6 +1,7 @@
 // Connect to the Socket Instance
 var socket = require('socket.io-client')('http://localhost:9001/');
 var Changeset = require('./Changeset');
+var AttributePool = require('./AttributePool');
 
 var padState = {}; // The state of the pad, we hold this in memory
 
@@ -27,6 +28,25 @@ socket.on('message', function(obj){
     var opiterator = Changeset.opIterator(unpacked.ops); // Look at each op
     console.log("opiterator", opiterator);
     padState.newRev = obj.data.newRev;
+
+    if(obj.data.text){
+      padState.atext = obj.data.text;
+    }else{
+      obj.data.text = padState.atext;
+    }
+
+console.log("obj.data.changeset", obj.data.changeset);
+    var baseAText = Changeset.cloneAText(padState.atext);
+console.log("baseAText", baseAText);
+    var wireApool = new AttributePool().fromJsonable(obj.data.apool);
+console.log("wireApool", wireApool);
+    var c = Changeset.moveOpsToNewPool(obj.data.changeset, wireApool, padState.apool);
+    // var bAattribs = Changeset.moveOpsToNewPool(baseAText.attribs, wireApool, padState.apool);
+
+    var baseAText = Changeset.applyToAText(c, baseAText, padState.apool);
+    console.log(baseAText);
+
+
   }
 
   else if(obj.type === 'COLLABROOM' && obj.data && obj.data.type === 'USER_NEWINFO'){
