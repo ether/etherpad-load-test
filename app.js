@@ -2,8 +2,17 @@
 var socket = require('socket.io-client')('http://localhost:9001/');
 var Changeset = require('./Changeset');
 var AttributePool = require('./AttributePool');
-
 var padState = {}; // The state of the pad, we hold this in memory
+
+/* 
+// Some docs on how this client might work..
+var pad = new etherpad("http://127.0.0.1:9001/p/test");
+pad.listen();
+pad.send("hello");
+pad.on("message", function(obj){
+
+});
+*/
 
 socket.on('message', function(obj){
   var type = obj.type;
@@ -22,13 +31,14 @@ socket.on('message', function(obj){
     beginSendingMessages(obj);
   }
 
-  // Get the new Revision number from a change
   else if(obj.type === 'COLLABROOM' && obj.data && obj.data.type === 'NEW_CHANGES'){
     // console.log("new changes", obj.data);
-    var unpacked = Changeset.unpack(obj.data.changeset); // Unpack the changeset
-    var opiterator = Changeset.opIterator(unpacked.ops); // Look at each op
+    // var unpacked = Changeset.unpack(obj.data.changeset); // Unpack the changeset
+    // var opiterator = Changeset.opIterator(unpacked.ops); // Look at each op
     // console.log("opiterator", opiterator);
-    padState.newRev = obj.data.newRev;
+
+    // Get the new Revision number from a change and store this as the new base
+    padState.baseRev = obj.data.newRev;
 
     if(obj.data.text){
       padState.atext = obj.data.text;
@@ -60,7 +70,6 @@ socket.on('message', function(obj){
 
   else if(obj.type === 'COLLABROOM' && obj.data && obj.data.type === 'ACCEPT_COMMIT'){
     // Server accepted a commit so bump the newRev..
-    console.log("ACCEPT_COMMIT", obj);
     padState.baseRev = obj.data.newRev;
   }
 
@@ -85,31 +94,21 @@ function beginSendingMessages(obj){
   console.log("initial apool", padState.apool);
 
   // Send a message every second
-//  setInterval(function(){
+  setInterval(function(){
 
-    // Get the previous atext.text length
-    // var oldLength = padState.atext.length;
-    // Given atext.text of "hello" append "world"
-    // Get the new length
-// console.log("padState.atext", padState.atext);
-
+    // Create a new changeset
     var newChangeset = Changeset.makeSplice(padState.atext.text, padState.atext.text.length-1, 0, "world");
 
-console.log("newChjangeset", newChangeset);
-
-    // pad.appendRevision(nlChangeset); // see how this is done
-
-
+    // Create new AText with applied changeset
     var newAText = Changeset.applyToAText(newChangeset, padState.atext, padState.apool);
-console.log("newAText", newAText);
+
+    // Save the new AText with the changes
     padState.atext = newAText;
 
+    // Create a blank attribute pool for the wire
     var wireApool = new AttributePool().toJsonable();
 
-console.log("wireApool", wireApool);
-
-// Find out what is wrong with this msg
-
+    // Create a message including the changeset
     var msg = {
       "component": "pad",
       "type": 'USER_CHANGES',
@@ -118,17 +117,14 @@ console.log("wireApool", wireApool);
       "apool": wireApool
     };
 
+    // Send the message
     socket.json.send({
       type: "COLLABROOM",
       component: "pad",
       data: msg
     });
 
-
-padState.baseRev = padState.baseRev+1;
-console.log("sent", msg);
-
-//  }, 1000);
+  }, 1000);
 
 }
 
