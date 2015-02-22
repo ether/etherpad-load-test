@@ -8,7 +8,10 @@
     "url": "http://mclear.co.uk"
   },
   "contributors": [],
-  "dependencies": {},
+  "dependencies": {
+    "etherpad-cli-client":"*",
+    "async":"*"
+  },
   "engines": {
     "node": "*"
   },
