@@ -4,7 +4,7 @@
 ## Specify the Etherpad instance
 ``etherpad-loadtest http://127.0.0.1:9001``
 
-## Test Specific Etherpad Instance for 60 seconds``
+## Test Specific Etherpad Instance for 60 seconds
 ``etherpad-loadtest http://127.0.0.1:9001 -d 60``
 
 ## Test a specific Pad
