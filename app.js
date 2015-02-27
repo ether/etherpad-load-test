@@ -6,6 +6,8 @@ var stats = Measured.createCollection();
 var activeConnections = new Measured.Counter();
 var startTimestamp = Date.now();
 
+// Take Params and process them
+
 var host = "http://127.0.0.1:9001/p/test";
 
 // For now let's create 5 lurking clients and 1 author.
@@ -39,6 +41,10 @@ function newAuthor(){
     // console.log("Connected Author to", padState.host);
     // console.log("Sending contents at pad");
 
+    // Every second we send 4 characters
+    // Mean = 40 WPM = 240 characters/minute
+    // https://imlocation.wordpress.com/2007/12/05/how-fast-do-people-type/
+    // This simulates the Mean of an author
     setInterval(function(){
       stats.meter('appendSent').mark();
       updateMetricsUI();
@@ -49,7 +55,7 @@ function newAuthor(){
         stats.meter('error').mark();
         console.log("Error probably mismatch");
       }
-    }, 50);
+    }, 1000);
   });
   pad.on("message", function(msg){
     if(msg.type !== "COLLABROOM") return;
@@ -77,12 +83,15 @@ function newLurker(){
 }
 
 function randomString() {
-  var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
-  var string_length = Math.floor(Math.random() *10);
   var randomstring = '';
+  // var string_length = Math.floor(Math.random() *2);
+  var string_length = 4; // See above for WPM stats
   for (var i=0; i<string_length; i++) {
-    var rnum = Math.floor(Math.random() * chars.length);
-    randomstring += chars.substring(rnum,rnum+1);
+    var charNumber = Math.random() * (300 - 1) + 1;
+    var str = String.fromCharCode(parseInt(charNumber)); 
+    // This method generates sufficient noise
+    // It also includes white space and non ASCII Chars
+    randomstring += str;
   }
   return randomstring;
 }
@@ -116,5 +125,5 @@ function updateMetricsUI(){
   if(jstats.changeFromServer){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
   }
-  console.log("Seconds test has been running for:", testDuration/1000);
+  console.log("Seconds test has been running for:", parseInt(testDuration/1000));
 }
