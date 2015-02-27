@@ -14,6 +14,14 @@ var users = []
 // Take Params and process them
 var args = argv.option( argvopts ).run();
 
+// Check for a host..
+if(process.argv[2].indexOf("http://") !== -1){
+  // It the arv2 item contains a hostname..
+  var host = process.argv[2];
+}else{
+  var host = "http://127.0.0.1:9001/"+randomPadName();
+}
+
 if(args.options.lurkers){
   var i = 0;
   while(i < args.options.lurkers){
@@ -121,6 +129,17 @@ function randomString() {
     // This method generates sufficient noise
     // It also includes white space and non ASCII Chars
     randomstring += str;
+  }
+  return randomstring;
+}
+
+function randomPadName(){ // From index.html
+  var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var string_length = 10;
+  var randomstring = '';
+  for (var i = 0; i < string_length; i++){
+    var rnum = Math.floor(Math.random() * chars.length);
+    randomstring += chars.substring(rnum, rnum + 1);
   }
   return randomstring;
 }
