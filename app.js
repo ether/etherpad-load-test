@@ -49,10 +49,7 @@ setInterval(function(){
   }
 },100);
 
-var host = "http://127.0.0.1:9001/p/test";
-
 async.eachSeries(users, function(type, callback){
-  console.log(type);
   setTimeout(function(){
     if(type === "l"){
       newLurker();
@@ -63,7 +60,9 @@ async.eachSeries(users, function(type, callback){
       callback();
     }
 
-  }, 10);
+  }, 1000/(args.options.authors || 1)); 
+  // All users connect within 1 second but send messages on 
+  // slightly different intervals
 }, function(err){
   
 });
@@ -86,7 +85,7 @@ function newAuthor(){
       stats.meter('appendSent').mark();
       updateMetricsUI();
       try{
-        pad.append(randomString()); // Appends Hello to the Pad contents
+        pad.append(randomString()); // Appends 4 Chars
       }
       catch(e){
         stats.meter('error').mark();
@@ -150,7 +149,7 @@ function updateMetricsUI(){
   var testDuration = Date.now() - startTimestamp;
 
   console.log("\u001b[2J\u001b[0;0H");
-  console.log("Load Test Metrics\n")
+  console.log("Load Test Metrics -- Target Pad", host, "\n");
   // console.log(jstats.clientsConnected);
   if(jstats.clientsConnected.count){
     console.log("Clients Connected:", jstats.clientsConnected.count);
