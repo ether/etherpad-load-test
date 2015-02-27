@@ -9,22 +9,34 @@ var etherpad = require("etherpad-cli-client"),
 var stats = Measured.createCollection();
 var startTimestamp = Date.now();
 var activeConnections = new Measured.Counter();
+var users = []
 
 // Take Params and process them
 var args = argv.option( argvopts ).run();
 
-argv.info("blahblah");
+if(args.options.lurkers){
+  users.push("l");
+}
+if(args.options.authors){
+  users.push("a");
+}
+if(args.options.duration){
+  var endTime = startTimestamp + (args.options.duration*1000);
+}
 
-console.log(args);
-
+// Check every second to see if currentTime is => endTime
+setInterval(function(){
+  var currentTime = Date.now();
+  if(currentTime > endTime){
+    console.log("test duration complete");
+    process.exit(0);
+  }
+},100);
 
 var host = "http://127.0.0.1:9001/p/test";
 
-// For now let's create 5 lurking clients and 1 author.
-var c = ["l","l","l","a"]
-// var c = ["l","l","l","l","l","a","l","a","a","a","a","a"]
-
-async.eachSeries(c, function(type, callback){
+async.eachSeries(users, function(type, callback){
+  console.log(type);
   setTimeout(function(){
     if(type === "l"){
       newLurker();
@@ -107,7 +119,6 @@ function randomString() {
 
 // Redraws the UI of metrics
 function updateMetricsUI(){
-/*
   var jstats = stats.toJSON();
   var testDuration = Date.now() - startTimestamp;
 
@@ -121,7 +132,7 @@ function updateMetricsUI(){
     console.log("Authors Connected:", jstats.authorsConnected.count);
   }
   if(jstats.lurkersConnected){
-    console.log("Lurkerss Connected:", jstats.lurkersConnected.count);
+    console.log("Lurkers Connected:", jstats.lurkersConnected.count);
   }
   if(jstats.appendSent){
     console.log("Sent Append messages:", jstats.appendSent.count);
@@ -136,5 +147,4 @@ function updateMetricsUI(){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
   }
   console.log("Seconds test has been running for:", parseInt(testDuration/1000));
-*/
 }
