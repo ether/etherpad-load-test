@@ -22,6 +22,6 @@
     "url"  : "https://github.com/ether/etherpad-load-test.git"
   },
   "bin":{
-    "etherpad":"app.js"
+    "etherpad-loadtest":"app.js"
   }
 }

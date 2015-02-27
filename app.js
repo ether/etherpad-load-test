@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var etherpad = require("etherpad-cli-client"),
     Measured = require("measured"),
        async = require("async"),
@@ -10,6 +12,8 @@ var activeConnections = new Measured.Counter();
 
 // Take Params and process them
 var args = argv.option( argvopts ).run();
+
+argv.info("blahblah");
 
 console.log(args);
 
