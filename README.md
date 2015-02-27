@@ -16,9 +16,13 @@ Note ``-p`` Will create 10 random pads and assign -l and -a to each.  ``-p`` Can
 
 ## Parameters
 ``-l`` number of lurkers.
+
 ``-a`` number of active authors.
+
 ``-p`` number of pads to test against.
+
 ``-d`` duration in seconds to test for.  Default is unlimited.
+
 
 Basic load test will increase # of lurkers and authors every second until changesets are stopped processing
 At this point the # of lurkers and authors tells the admin how many people could use

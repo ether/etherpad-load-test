@@ -10,7 +10,8 @@
   "contributors": [],
   "dependencies": {
     "etherpad-cli-client":"*",
-    "async":"*"
+    "async":"*",
+    "measured":"*"
   },
   "engines": {
     "node": "*"
