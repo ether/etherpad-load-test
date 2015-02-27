@@ -60,9 +60,11 @@ async.eachSeries(users, function(type, callback){
       callback();
     }
 
-  }, 1000/(args.options.authors || 1)); 
-  // All users connect within 1 second but send messages on 
+//  }, 1000/(args.options.authors || 1)); 
+  }, 1000/(users.length || 1)); 
+  // All authors connect within 1 second but send messages on 
   // slightly different intervals
+  // This need slightly different logic
 }, function(err){
   
 });
