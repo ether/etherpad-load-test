@@ -172,5 +172,11 @@ function updateMetricsUI(){
   if(jstats.changeFromServer){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
   }
+  if(jstats.appendSent && jstats.acceptedCommit){
+    var diff = jstats.appendSent.count - jstats.acceptedCommit.count;
+    if(diff > 5){
+      console.log("Number of commits not yet replied as ACCEPT_COMMIT from server", diff);
+    }
+  }
   console.log("Seconds test has been running for:", parseInt(testDuration/1000));
 }
