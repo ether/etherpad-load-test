@@ -19,7 +19,7 @@ if(process.argv[2].indexOf("http://") !== -1){
   // It the arv2 item contains a hostname..
   var host = process.argv[2];
 }else{
-  var host = "http://127.0.0.1:9001/"+randomPadName();
+  var host = "http://127.0.0.1:9001/p/"+randomPadName();
 }
 
 if(args.options.lurkers){
