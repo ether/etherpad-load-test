@@ -15,10 +15,18 @@ var users = []
 var args = argv.option( argvopts ).run();
 
 if(args.options.lurkers){
-  users.push("l");
+  var i = 0;
+  while(i < args.options.lurkers){
+    users.push("l");
+    i++;
+  }
 }
 if(args.options.authors){
-  users.push("a");
+  i = 0;
+  while(i < args.options.authors){
+    users.push("a");
+    i++;
+  }
 }
 if(args.options.duration){
   var endTime = startTimestamp + (args.options.duration*1000);
