@@ -1,12 +1,18 @@
-// Connect to the Socket Instance
-var etherpad = require("etherpad-cli-client");
-var async = require("async");
-var Measured = require("measured");
+var etherpad = require("etherpad-cli-client"),
+    Measured = require("measured"),
+       async = require("async"),
+        argv = require("argv"),
+    argvopts = require("./argopts.js").opts;
+
 var stats = Measured.createCollection();
-var activeConnections = new Measured.Counter();
 var startTimestamp = Date.now();
+var activeConnections = new Measured.Counter();
 
 // Take Params and process them
+var args = argv.option( argvopts ).run();
+
+console.log(args);
+
 
 var host = "http://127.0.0.1:9001/p/test";
 
@@ -38,9 +44,8 @@ function newAuthor(){
     stats.meter('authorsConnected').mark();
     activeConnections.inc();
     updateMetricsUI();
-    // console.log("Connected Author to", padState.host);
-    // console.log("Sending contents at pad");
 
+    // console.log("Connected Author to", padState.host);
     // Every second we send 4 characters
     // Mean = 40 WPM = 240 characters/minute
     // https://imlocation.wordpress.com/2007/12/05/how-fast-do-people-type/
@@ -53,7 +58,7 @@ function newAuthor(){
       }
       catch(e){
         stats.meter('error').mark();
-        console.log("Error probably mismatch");
+        console.log("Error!");
       }
     }, 1000);
   });
@@ -75,7 +80,7 @@ function newLurker(){
     stats.meter('clientsConnected').mark();
     stats.meter('lurkersConnected').mark();
     updateMetricsUI();
-    console.log("Connected new lurker to", padState.host);
+    // console.log("Connected new lurker to", padState.host);
   });
   pad.on("newContents", function(atext){
     stats.meter("changeFromServer").mark();
@@ -98,6 +103,7 @@ function randomString() {
 
 // Redraws the UI of metrics
 function updateMetricsUI(){
+/*
   var jstats = stats.toJSON();
   var testDuration = Date.now() - startTimestamp;
 
@@ -126,4 +132,5 @@ function updateMetricsUI(){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
   }
   console.log("Seconds test has been running for:", parseInt(testDuration/1000));
+*/
 }
