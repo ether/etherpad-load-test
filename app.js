@@ -9,15 +9,20 @@ var etherpad = require("etherpad-cli-client"),
 var stats = Measured.createCollection();
 var startTimestamp = Date.now();
 var activeConnections = new Measured.Counter();
-var users = []
+var users = [];
+var loadUntilFail = false;
 
 // Take Params and process them
 var args = argv.option( argvopts ).run();
 
 // Check for a host..
-if(process.argv[2].indexOf("http://") !== -1){
+if(process.argv[2] && process.argv[2].indexOf("http://") !== -1){
   // It the arv2 item contains a hostname..
   var host = process.argv[2];
+
+  if(host.indexOf("/p/") === -1){ // No pad ID included so include one
+    host = host+"/p/"+randomPadName();
+  }
 }else{
   var host = "http://127.0.0.1:9001/p/"+randomPadName();
 }
@@ -49,25 +54,54 @@ setInterval(function(){
   }
 },100);
 
-async.eachSeries(users, function(type, callback){
-  setTimeout(function(){
-    if(type === "l"){
-      newLurker();
-      callback();
-    }
-    if(type === "a"){
-      newAuthor();
-      callback();
-    }
-
-//  }, 1000/(args.options.authors || 1)); 
-  }, 1000/(users.length || 1)); 
-  // All authors connect within 1 second but send messages on 
-  // slightly different intervals
-  // This need slightly different logic
-}, function(err){
+// If there are authors / lurkers specified let's connect them up!
+if(args.options.authors || args.options.lurkers){
+  async.eachSeries(users, function(type, callback){
+    setTimeout(function(){
+      if(type === "l"){
+        newLurker();
+        callback();
+      }
+      if(type === "a"){
+        newAuthor();
+        callback();
+      }
   
-});
+  //  }, 1000/(args.options.authors || 1)); 
+    }, 1000/(users.length || 1)); 
+    // All authors connect within 1 second but send messages on 
+    // slightly different intervals
+    // This need slightly different logic
+  }, function(err){
+  });
+}else{
+  console.log("Creating load until the pad server stops responding in a timely fashion");
+  loadUntilFailFn();
+}
+
+// Create load until failure.
+function loadUntilFailFn(){
+  loadUntilFail = true;
+  // Loads at ratio of 3(lurkers):1(author), every 5 seconds it adds more.
+  var users = ["a","l","l","l"];
+
+  setInterval(function(){
+    async.eachSeries(users, function(type, callback){
+      setTimeout(function(){
+        if(type === "l"){
+          newLurker();
+          callback();
+        }
+        if(type === "a"){
+          newAuthor();
+          callback();
+        }
+      }, 1000/(users.length || 1));
+    }, function(err){
+    });
+  },5000); // every 5 seconds
+
+}
 
 // Creates a new author
 function newAuthor(){
@@ -178,6 +212,7 @@ function updateMetricsUI(){
     var diff = jstats.appendSent.count - jstats.acceptedCommit.count;
     if(diff > 5){
       console.log("Number of commits not yet replied as ACCEPT_COMMIT from server", diff);
+      if(loadUntilFail && diff > 100) process.exit(0);
     }
   }
   console.log("Seconds test has been running for:", parseInt(testDuration/1000));

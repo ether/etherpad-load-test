@@ -1,3 +1,6 @@
+## IMPORTANT
+Don't forget to enable Load Testing in your Etherpad ``settings.json``.  ``"loadTest":true``
+
 ## Basic Load Test Example
 ``etherpad-loadtest``
 
@@ -10,20 +13,18 @@
 ## Test a specific Pad
 ``etherpad-loadtest http://127.0.0.1:9001/p/test``
 
-## 50 Lurkers, 10 authors, 10 pads (so 600 connections in total)
-``etherpad-loadtest http://127.0.0.1:9001 -l 50 -a 10 -p 10``
-Note ``-p`` Will create 10 random pads and assign -l and -a to each.  ``-p`` Cannot be used with an explicity pad ergo -p 1 is pointless
+## 50 Lurkers, 10 authors
+``etherpad-loadtest http://127.0.0.1:9001 -l 50 -a 10``
 
 ## Parameters
 ``-l`` number of lurkers.
 
 ``-a`` number of active authors.
 
-``-p`` number of pads to test against.
-
 ``-d`` duration in seconds to test for.  Default is unlimited.
 
 
-Basic load test will increase # of lurkers and authors every second until changesets are stopped processing
-At this point the # of lurkers and authors tells the admin how many people could use
-their instance
+Basic load test will increase # of lurkers and authors every 5 seconds until changesets are stopped processing in a timely fashion.
+At this point the # of lurkers and authors tells the admin how many people could use their instance.  Roughly.  Take into account as documents grow they have heavier computing costs.  
+
+You should modify your tests to your use case.
