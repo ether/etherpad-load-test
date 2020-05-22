@@ -16,10 +16,9 @@ var loadUntilFail = false;
 var args = argv.option( argvopts ).run();
 
 // Check for a host..
-if(process.argv[2] && process.argv[2].indexOf("http://") !== -1){
+if(process.argv[2] && process.argv[2].indexOf("http") !== -1){
   // It the arv2 item contains a hostname..
   var host = process.argv[2];
-
   if(host.indexOf("/p/") === -1){ // No pad ID included so include one
     host = host+"/p/"+randomPadName();
   }
