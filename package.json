@@ -1,7 +1,7 @@
 {
   "name": "etherpad-load-test",
   "description": "Client to Load Test an Etherpad Instance",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": {
     "name": "John McLear",
     "email": "john@mclear.co.uk",
@@ -9,19 +9,19 @@
   },
   "contributors": [],
   "dependencies": {
-    "etherpad-cli-client":"*",
-    "async":"*",
-    "measured":"*",
-    "argv":"*"
+    "etherpad-cli-client": "*",
+    "async": "*",
+    "measured": "*",
+    "argv": "*"
   },
   "engines": {
     "node": "*"
   },
-  "repository" : {
-    "type" : "git",
-    "url"  : "https://github.com/ether/etherpad-load-test.git"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ether/etherpad-load-test.git"
   },
-  "bin":{
-    "etherpad-loadtest":"app.js"
+  "bin": {
+    "etherpad-loadtest": "app.js"
   }
 }

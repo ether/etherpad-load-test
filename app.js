@@ -11,6 +11,7 @@ var startTimestamp = Date.now();
 var activeConnections = new Measured.Counter();
 var users = [];
 var loadUntilFail = false;
+var globalStats = {};
 
 // Take Params and process them
 var args = argv.option( argvopts ).run();
@@ -143,6 +144,7 @@ function newAuthor(){
 function newLurker(){
   var pad = etherpad.connect(host);
   pad.on("connected", function(padState){
+    globalStats.numConnectedUsers = padState.numConnectedUsers;
     stats.meter('clientsConnected').mark();
     stats.meter('lurkersConnected').mark();
     updateMetricsUI();
@@ -186,8 +188,11 @@ function updateMetricsUI(){
   console.log("\u001b[2J\u001b[0;0H");
   console.log("Load Test Metrics -- Target Pad", host, "\n");
   // console.log(jstats.clientsConnected);
+  if(globalStats.numConnectedUsers){
+    console.log("Total Clients Connected:", globalStats.numConnectedUsers);
+  }
   if(jstats.clientsConnected.count){
-    console.log("Clients Connected:", jstats.clientsConnected.count);
+    console.log("Local Clients Connected:", jstats.clientsConnected.count);
   }
   if(jstats.authorsConnected){
     console.log("Authors Connected:", jstats.authorsConnected.count);
