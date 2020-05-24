@@ -211,6 +211,8 @@ function updateMetricsUI(){
   }
   if(jstats.changeFromServer){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
+    console.log("Current rate per second of Commits sent from Server to Client:", Math.round(jstats.changeFromServer.currentRate));
+    console.log("Mean(per second) of # of Commits sent from Server to Client:", Math.round(jstats.changeFromServer.mean));
   }
   if(jstats.appendSent && jstats.acceptedCommit){
     var diff = jstats.appendSent.count - jstats.acceptedCommit.count;
