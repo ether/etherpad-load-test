@@ -12,6 +12,7 @@ var activeConnections = new Measured.Counter();
 var users = [];
 var loadUntilFail = false;
 var globalStats = {};
+var maxPS = 0;
 
 // Take Params and process them
 var args = argv.option( argvopts ).run();
@@ -68,7 +69,7 @@ if(args.options.authors || args.options.lurkers){
       }
   
   //  }, 1000/(args.options.authors || 1)); 
-    }, 1000/(users.length || 1)); 
+    }, 200/(users.length || 1)); 
     // All authors connect within 1 second but send messages on 
     // slightly different intervals
     // This need slightly different logic
@@ -96,10 +97,10 @@ function loadUntilFailFn(){
           newAuthor();
           callback();
         }
-      }, 1000/(users.length || 1));
+      }, 200/(users.length || 1));
     }, function(err){
     });
-  },5000); // every 5 seconds
+  },1000); // every 5 seconds
 
 }
 
@@ -127,7 +128,7 @@ function newAuthor(){
         stats.meter('error').mark();
         console.log("Error!");
       }
-    }, 1000);
+    }, 400);
   });
   pad.on("message", function(msg){
     if(msg.type !== "COLLABROOM") return;
@@ -213,6 +214,10 @@ function updateMetricsUI(){
     console.log("Commits sent from Server to Client:", jstats.changeFromServer.count);
     console.log("Current rate per second of Commits sent from Server to Client:", Math.round(jstats.changeFromServer.currentRate));
     console.log("Mean(per second) of # of Commits sent from Server to Client:", Math.round(jstats.changeFromServer.mean));
+    if(Math.round(jstats.changeFromServer.currentRate) > maxPS){
+      maxPS = Math.round(jstats.changeFromServer.currentRate);
+    }
+    console.log("Max(per second) of # of Messages (SocketIO has cap of 10k):", maxPS || Math.round(jstats.changeFromServer.currentRate));
   }
   if(jstats.appendSent && jstats.acceptedCommit){
     var diff = jstats.appendSent.count - jstats.acceptedCommit.count;
