@@ -108,6 +108,7 @@ function loadUntilFailFn(){
 function newAuthor(){
   var pad = etherpad.connect(host);
   pad.on("connected", function(padState){
+    globalStats.numConnectedUsers = padState.numConnectedUsers;
     stats.meter('clientsConnected').mark();
     stats.meter('authorsConnected').mark();
     activeConnections.inc();
