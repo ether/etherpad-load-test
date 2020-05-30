@@ -32,11 +32,8 @@ jobs:
         - "git clone https://github.com/ether/etherpad-lite.git etherpad"
         - "mv etherpad-load-test etherpad"
         - "cd etherpad"
-#        - "mkdir node_modules"
-#        - "mv ../ep_comments_page node_modules"
         - "bin/installDeps.sh"
         - "export GIT_HASH=$(git rev-parse --verify --short HEAD)"
-#        - "npm install ep_test_line_attrib"
         - "cd src && npm install && cd -"
       script:
         - "tests/frontend/travis/runnerLoadTest.sh"

@@ -224,7 +224,7 @@ function updateMetricsUI(){
     var diff = jstats.appendSent.count - jstats.acceptedCommit.count;
     if(diff > 5){
       console.log("Number of commits not yet replied as ACCEPT_COMMIT from server", diff);
-      if(loadUntilFail && diff > 100) process.exit(0);
+      if(loadUntilFail && diff > 100) process.exit(1);
     }
   }
   console.log("Seconds test has been running for:", parseInt(testDuration/1000));
