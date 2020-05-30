@@ -28,3 +28,7 @@ Basic load test will increase # of lurkers and authors every 5 seconds until cha
 At this point the # of lurkers and authors tells the admin how many people could use their instance.  Roughly.  Take into account as documents grow they have heavier computing costs.  
 
 You should modify your tests to your use case.
+
+
+# License
+Apache 2
