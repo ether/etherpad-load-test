@@ -52,6 +52,10 @@ setInterval(function(){
   if(currentTime > endTime){
     console.log("Test duration complete and Load Tests PASS");
     console.log(stats.toJSON());
+    if(Object.keys(stats.toJSON().length) === 0){
+      console.error("no test data gathered, perhaps loadTest wasn't enabled?");
+      process.exit(1);
+    }
     process.exit(0);
   }
 },100);
@@ -116,6 +120,10 @@ function newAuthor(){
     console.error("socket timeout connecting to pad");
     process.exit(1);
   })
+  pad.on("socket_error", function(){
+    console.error("connection error connecting to pad, did you remember to set loadTest to true?");
+    process.exit(1);
+  })
   pad.on("connected", function(padState){
     globalStats.numConnectedUsers = padState.numConnectedUsers;
     stats.meter('clientsConnected').mark();
@@ -156,6 +164,10 @@ function newLurker(){
   var pad = etherpad.connect(host);
   pad.on("socket_timeout", function(){
     console.error("socket timeout connecting to pad");
+    process.exit(1);
+  })
+  pad.on("socket_error", function(){
+    console.error("connection error connecting to pad, did you remember to set loadTest to true?");
     process.exit(1);
   })
   pad.on("connected", function(padState){
