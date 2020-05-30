@@ -77,7 +77,11 @@ if(args.options.authors || args.options.lurkers){
   }, function(err){
   });
 }else{
-  console.log("Creating load until the pad server stops responding in a timely fashion");
+  if(!endTime) console.log("Creating load until the pad server stops responding in a timely fashion");
+  if(endTime){
+    let testD = Math.round((endTime - Date.now())/1000);
+    console.log("Creating load for " + testD + " seconds");
+  }
   loadUntilFailFn();
 }
 
