@@ -50,7 +50,8 @@ if(args.options.duration){
 setInterval(function(){
   var currentTime = Date.now();
   if(currentTime > endTime){
-    console.log("test duration complete");
+    console.log("Test duration complete and Load Tests PASS");
+    console.log(stats.toJSON());
     process.exit(0);
   }
 },100);
