@@ -33,8 +33,7 @@ jobs:
         - "bin/installDeps.sh"
         - "export GIT_HASH=$(git rev-parse --verify --short HEAD)"
         - "cd src && npm install && cd -"
-#        - "cd .."
-#        - "cd etherpad"
+        - "sed 's/\"loadTest\": false,/\"loadTest\": true,/g' settings.json.template > settings.json"
       script:
         - "tests/frontend/travis/runnerLoadTest.sh"
 
