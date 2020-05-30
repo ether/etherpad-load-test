@@ -27,14 +27,14 @@ jobs:
   include:
     - name: "Load Testing"
       install:
+        - "npm install -g"
         - "git clone https://github.com/ether/etherpad-lite.git etherpad"
         - "cd etherpad"
         - "bin/installDeps.sh"
         - "export GIT_HASH=$(git rev-parse --verify --short HEAD)"
         - "cd src && npm install && cd -"
-        - "cd .."
-        - "npm install -g"
-        - "cd etherpad"
+#        - "cd .."
+#        - "cd etherpad"
       script:
         - "tests/frontend/travis/runnerLoadTest.sh"
 
