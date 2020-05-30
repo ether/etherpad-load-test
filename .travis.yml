@@ -27,10 +27,8 @@ jobs:
   include:
     - name: "Load Testing"
       install:
-        - "mkdir etherpad-load-test"
-        - "mv !(etherpad-load-test) etherpad-load-test"
+        - "npm install -g"
         - "git clone https://github.com/ether/etherpad-lite.git etherpad"
-        - "mv etherpad-load-test etherpad"
         - "cd etherpad"
         - "bin/installDeps.sh"
         - "export GIT_HASH=$(git rev-parse --verify --short HEAD)"
