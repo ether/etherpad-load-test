@@ -112,6 +112,10 @@ function loadUntilFailFn(){
 // Creates a new author
 function newAuthor(){
   var pad = etherpad.connect(host);
+  pad.on("socket_timeout", function(){
+    console.error("socket timeout connecting to pad");
+    process.exit(1);
+  })
   pad.on("connected", function(padState){
     globalStats.numConnectedUsers = padState.numConnectedUsers;
     stats.meter('clientsConnected').mark();
@@ -150,6 +154,10 @@ function newAuthor(){
 // Creates a new lurker.
 function newLurker(){
   var pad = etherpad.connect(host);
+  pad.on("socket_timeout", function(){
+    console.error("socket timeout connecting to pad");
+    process.exit(1);
+  })
   pad.on("connected", function(padState){
     globalStats.numConnectedUsers = padState.numConnectedUsers;
     stats.meter('clientsConnected').mark();
