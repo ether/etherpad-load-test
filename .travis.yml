@@ -30,6 +30,7 @@ jobs:
         - "mkdir etherpad-load-test"
         - "mv !(etherpad-load-test) etherpad-load-test"
         - "git clone https://github.com/ether/etherpad-lite.git etherpad"
+        - "mv etherpad-load-test etherpad"
         - "cd etherpad"
 #        - "mkdir node_modules"
 #        - "mv ../ep_comments_page node_modules"
