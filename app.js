@@ -52,7 +52,7 @@ setInterval(function(){
   if(currentTime > endTime){
     console.log("Test duration complete and Load Tests PASS");
     console.log(stats.toJSON());
-    if(Object.keys(stats.toJSON().length) === 0){
+    if(Object.keys(stats.toJSON()).length === 0){
       console.error("no test data gathered, perhaps loadTest wasn't enabled?");
       process.exit(1);
     }
