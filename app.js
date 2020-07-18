@@ -141,10 +141,11 @@ function newAuthor(){
       updateMetricsUI();
       try{
         pad.append(randomString()); // Appends 4 Chars
+        pad.apply(); // Appends 4 Chars
       }
       catch(e){
         stats.meter('error').mark();
-        console.log("Error!");
+        console.log("Error!", e);
       }
     }, 400);
   });
