@@ -7,6 +7,9 @@ Don't forget to enable Load Testing in your Etherpad ``settings.json``.  ``"load
 ## Specify the Etherpad instance
 ``etherpad-loadtest http://127.0.0.1:9001``
 
+## Specify how many pads to test against
+``etherpad-loadtest http://127.0.0.1:9001 -p 10``
+
 ## Test Specific Etherpad Instance for 60 seconds
 ``etherpad-loadtest http://127.0.0.1:9001 -d 60``
 
@@ -17,6 +20,8 @@ Don't forget to enable Load Testing in your Etherpad ``settings.json``.  ``"load
 ``etherpad-loadtest http://127.0.0.1:9001 -l 50 -a 10``
 
 ## Parameters
+``-p`` number of pads to test against (padIds are random).  Testing is done in parallel.
+
 ``-l`` number of lurkers.
 
 ``-a`` number of active authors.
