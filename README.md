@@ -29,6 +29,19 @@ At this point the # of lurkers and authors tells the admin how many people could
 
 You should modify your tests to your use case.
 
+# Testing multiple pads at once
+``node multi.js numberOfPads``
+
+## Example
+``node multi.js 10``
+
+The above command will put 3 authors on 10 pads for 30 seconds.  This creates a total of 30 authors.
+
+# Test Results
+* On a reasonable machine you can expect 40 authors on one pad. (-a 40)
+* On a reasonable machine you can expect to achieve around 3 authors on 200 pads [node multi.js 200]. 
+Remember that most authors will not contribute as agressively as our logic here, we implement max(worst case) user load testing.
+Note: Citation and test results needed.
 
 # License
 Apache 2
