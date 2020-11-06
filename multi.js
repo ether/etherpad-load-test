@@ -1,7 +1,7 @@
 // parent.js
 var child_process = require('child_process');
 
-var maxPads = 999;
+var maxPads = 10;
 var padCount = 0;
 var messageCount = 0;
 
