@@ -9,10 +9,10 @@
   },
   "contributors": [],
   "dependencies": {
-    "etherpad-cli-client": "*",
+    "argv": "*",
     "async": "*",
-    "measured": "*",
-    "argv": "*"
+    "etherpad-cli-client": "*",
+    "measured": "*"
   },
   "engines": {
     "node": "*"
@@ -23,6 +23,6 @@
   },
   "bin": {
     "etherpad-loadtest": "app.js",
-    "etherpad-loadtest-multi": "mulit.js"
+    "etherpad-loadtest-multi": "multi.js"
   }
 }
