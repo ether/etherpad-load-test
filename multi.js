@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // tests 10 pads (unless specified by "node multi.js X[int]" for 30 seconds
 var child_process = require('child_process');
 
