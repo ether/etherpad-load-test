@@ -8,7 +8,7 @@ var padCount = 0;
 var messageCount = 0;
 
 while(padCount < maxPads){
-  var child = child_process.fork('etherpad-loadtest', ['-a', 3, '-d', 30]);
+  var child = child_process.fork('/lib/node_modules/etherpad-load-test/app.js', ['-a', 3, '-d', 30]);
   padCount++;
   // below still not working...
   child.on('error', function(){
