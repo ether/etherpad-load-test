@@ -15,6 +15,17 @@ let loadUntilFail = false;
 const globalStats = {};
 let maxPS = 0;
 
+const randomPadName = () => { // From index.html
+  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const strLen = 10;
+  let randomstring = '';
+  for (let i = 0; i < strLen; i++) {
+    const rnum = Math.floor(Math.random() * chars.length);
+    randomstring += chars.substring(rnum, rnum + 1);
+  }
+  return randomstring;
+};
+
 // Take Params and process them
 const args = argv.option(argvopts).run();
 let host;
@@ -62,6 +73,30 @@ setInterval(() => {
   }
 }, 100);
 
+// Create load until failure.
+const loadUntilFailFn = () => {
+  loadUntilFail = true;
+  // Loads at ratio of 3(lurkers):1(author), every 5 seconds it adds more.
+  const users = ['a', 'l', 'l', 'l'];
+
+  setInterval(() => {
+    async.eachSeries(users, (type, callback) => {
+      setTimeout(() => {
+        if (type === 'l') {
+          newLurker();
+          callback();
+        }
+        if (type === 'a') {
+          newAuthor();
+          callback();
+        }
+      }, 200 / (users.length || 1));
+    }, (err) => {
+    });
+  }, 1000); // every 5 seconds
+};
+
+
 // If there are authors / lurkers specified let's connect them up!
 if (args.options.authors || args.options.lurkers) {
   async.eachSeries(users, (type, callback) => {
@@ -92,29 +127,6 @@ if (args.options.authors || args.options.lurkers) {
   }
   loadUntilFailFn();
 }
-
-// Create load until failure.
-const loadUntilFailFn = () => {
-  loadUntilFail = true;
-  // Loads at ratio of 3(lurkers):1(author), every 5 seconds it adds more.
-  const users = ['a', 'l', 'l', 'l'];
-
-  setInterval(() => {
-    async.eachSeries(users, (type, callback) => {
-      setTimeout(() => {
-        if (type === 'l') {
-          newLurker();
-          callback();
-        }
-        if (type === 'a') {
-          newAuthor();
-          callback();
-        }
-      }, 200 / (users.length || 1));
-    }, (err) => {
-    });
-  }, 1000); // every 5 seconds
-};
 
 // Creates a new author
 const newAuthor = () => {
@@ -194,17 +206,6 @@ const randomString = () => {
     // This method generates sufficient noise
     // It also includes white space and non ASCII Chars
     randomstring += str;
-  }
-  return randomstring;
-};
-
-const randomPadName = () => { // From index.html
-  const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-  const string_length = 10;
-  let randomstring = '';
-  for (let i = 0; i < string_length; i++) {
-    const rnum = Math.floor(Math.random() * chars.length);
-    randomstring += chars.substring(rnum, rnum + 1);
   }
   return randomstring;
 };
