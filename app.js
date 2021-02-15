@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+'use strict';
 
 const etherpad = require('etherpad-cli-client');
 const Measured = require('measured');
@@ -16,34 +17,35 @@ let maxPS = 0;
 
 // Take Params and process them
 const args = argv.option(argvopts).run();
-
+let host;
 // Check for a host..
 if (process.argv[2] && process.argv[2].indexOf('http') !== -1) {
   // It the arv2 item contains a hostname..
-  var host = process.argv[2];
+  host = process.argv[2];
   if (host.indexOf('/p/') === -1) { // No pad ID included so include one
     host = `${host}/p/${randomPadName()}`;
   }
 } else {
-  var host = `http://127.0.0.1:9001/p/${randomPadName()}`;
+  host = `http://127.0.0.1:9001/p/${randomPadName()}`;
 }
 
 if (args.options.lurkers) {
-  var i = 0;
+  let i = 0;
   while (i < args.options.lurkers) {
     users.push('l');
     i++;
   }
 }
 if (args.options.authors) {
-  i = 0;
-  while (i < args.options.authors) {
+  let x = 0;
+  while (x < args.options.authors) {
     users.push('a');
-    i++;
+    x++;
   }
 }
+let endTime;
 if (args.options.duration) {
-  var endTime = startTimestamp + (args.options.duration * 1000);
+  endTime = startTimestamp + (args.options.duration * 1000);
 }
 
 // Check every second to see if currentTime is => endTime
@@ -54,9 +56,9 @@ setInterval(() => {
     console.log(stats.toJSON());
     if (Object.keys(stats.toJSON()).length === 0) {
       console.error("no test data gathered, perhaps loadTest wasn't enabled?");
-      process.exit(1);
+      process.exit(1); /* eslint-disable-line no-process-exit */
     }
-    process.exit(0);
+    process.exit(0); /* eslint-disable-line no-process-exit */
   }
 }, 100);
 
@@ -81,7 +83,9 @@ if (args.options.authors || args.options.lurkers) {
   }, (err) => {
   });
 } else {
-  if (!endTime) console.log('Creating load until the pad server stops responding in a timely fashion');
+  if (!endTime) {
+    console.log('Creating load until the pad server stops responding in a timely fashion');
+  }
   if (endTime) {
     const testD = Math.round((endTime - Date.now()) / 1000);
     console.log(`Creating load for ${testD} seconds`);
@@ -90,7 +94,7 @@ if (args.options.authors || args.options.lurkers) {
 }
 
 // Create load until failure.
-function loadUntilFailFn() {
+const loadUntilFailFn = () => {
   loadUntilFail = true;
   // Loads at ratio of 3(lurkers):1(author), every 5 seconds it adds more.
   const users = ['a', 'l', 'l', 'l'];
@@ -110,18 +114,18 @@ function loadUntilFailFn() {
     }, (err) => {
     });
   }, 1000); // every 5 seconds
-}
+};
 
 // Creates a new author
-function newAuthor() {
+const newAuthor = () => {
   const pad = etherpad.connect(host);
   pad.on('socket_timeout', () => {
     console.error('socket timeout connecting to pad');
-    process.exit(1);
+    process.exit(1); /* eslint-disable-line no-process-exit */
   });
   pad.on('socket_error', () => {
     console.error('connection error connecting to pad, did you remember to set loadTest to true?');
-    process.exit(1);
+    process.exit(1); /* eslint-disable-line no-process-exit */
   });
   pad.on('connected', (padState) => {
     globalStats.numConnectedUsers = padState.numConnectedUsers;
@@ -155,18 +159,18 @@ function newAuthor() {
   pad.on('newContents', (atext) => {
     stats.meter('changeFromServer').mark();
   });
-}
+};
 
 // Creates a new lurker.
-function newLurker() {
+const newLurker = () => {
   const pad = etherpad.connect(host);
   pad.on('socket_timeout', () => {
     console.error('socket timeout connecting to pad');
-    process.exit(1);
+    process.exit(1); /* eslint-disable-line no-process-exit */
   });
   pad.on('socket_error', () => {
     console.error('connection error connecting to pad, did you remember to set loadTest to true?');
-    process.exit(1);
+    process.exit(1); /* eslint-disable-line no-process-exit */
   });
   pad.on('connected', (padState) => {
     globalStats.numConnectedUsers = padState.numConnectedUsers;
@@ -178,9 +182,9 @@ function newLurker() {
   pad.on('newContents', (atext) => {
     stats.meter('changeFromServer').mark();
   });
-}
+};
 
-function randomString() {
+const randomString = () => {
   let randomstring = '';
   // var string_length = Math.floor(Math.random() *2);
   const string_length = 4; // See above for WPM stats
@@ -192,9 +196,9 @@ function randomString() {
     randomstring += str;
   }
   return randomstring;
-}
+};
 
-function randomPadName() { // From index.html
+const randomPadName = () => { // From index.html
   const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   const string_length = 10;
   let randomstring = '';
@@ -203,10 +207,10 @@ function randomPadName() { // From index.html
     randomstring += chars.substring(rnum, rnum + 1);
   }
   return randomstring;
-}
+};
 
 // Redraws the UI of metrics
-function updateMetricsUI() {
+const updateMetricsUI = () => {
   const jstats = stats.toJSON();
   const testDuration = Date.now() - startTimestamp;
 
@@ -235,20 +239,24 @@ function updateMetricsUI() {
     console.log('Commits accepted by server:', jstats.acceptedCommit.count);
   }
   if (jstats.changeFromServer) {
-    console.log('Commits sent from Server to Client:', jstats.changeFromServer.count);
-    console.log('Current rate per second of Commits sent from Server to Client:', Math.round(jstats.changeFromServer.currentRate));
-    console.log('Mean(per second) of # of Commits sent from Server to Client:', Math.round(jstats.changeFromServer.mean));
+    console.log('Commits sent from Server to Client:',
+        jstats.changeFromServer.count);
+    console.log('Current rate per second of Commits sent from Server to Client:',
+        Math.round(jstats.changeFromServer.currentRate));
+    console.log('Mean(per second) of # of Commits sent from Server to Client:',
+        Math.round(jstats.changeFromServer.mean));
     if (Math.round(jstats.changeFromServer.currentRate) > maxPS) {
       maxPS = Math.round(jstats.changeFromServer.currentRate);
     }
-    console.log('Max(per second) of # of Messages (SocketIO has cap of 10k):', maxPS || Math.round(jstats.changeFromServer.currentRate));
+    console.log('Max(per second) of # of Messages (SocketIO has cap of 10k):',
+        maxPS || Math.round(jstats.changeFromServer.currentRate));
   }
   if (jstats.appendSent && jstats.acceptedCommit) {
     const diff = jstats.appendSent.count - jstats.acceptedCommit.count;
     if (diff > 5) {
       console.log('Number of commits not yet replied as ACCEPT_COMMIT from server', diff);
-      if (loadUntilFail && diff > 100) process.exit(1);
+      if (loadUntilFail && diff > 100) process.exit(1); /* eslint-disable-line no-process-exit */
     }
   }
   console.log('Seconds test has been running for:', parseInt(testDuration / 1000));
-}
+};
