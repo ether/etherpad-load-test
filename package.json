@@ -1,7 +1,7 @@
 {
   "name": "etherpad-load-test",
   "description": "Client to Load Test an Etherpad Instance",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "author": {
     "name": "John McLear",
     "email": "john@mclear.co.uk",
