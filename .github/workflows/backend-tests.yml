@@ -43,7 +43,7 @@ jobs:
 
     # configures some settings and runs npm run test
     - name: Run the backend tests
-      run: src/tests/frontend/travis/runnerLoadtest.sh
+      run: src/tests/frontend/travis/runnerLoadTest.sh
 
 ##ETHERPAD_NPM_V=1
 ## NPM configuration automatically created using src/bin/plugins/updateAllPluginsScript.sh
