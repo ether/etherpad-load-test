@@ -35,7 +35,7 @@ jobs:
     - name: Install plugin dependencies
       run: |
         cd node_modules/ep_load_test
-        npm i -g
+        sudo npm i -g
 
     - name: Remove core tests so only the client is tested
       run: |
