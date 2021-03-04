@@ -1,7 +1,7 @@
 {
   "name": "etherpad-load-test",
   "description": "Client to Load Test an Etherpad Instance",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "author": {
     "name": "John McLear",
     "email": "john@mclear.co.uk",
@@ -11,7 +11,7 @@
   "dependencies": {
     "argv": "*",
     "async": "*",
-    "etherpad-cli-client": "^0.1.5",
+    "etherpad-cli-client": "^0.1.6",
     "measured": "*"
   },
   "devDependencies": {
