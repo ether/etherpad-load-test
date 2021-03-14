@@ -1,8 +1,11 @@
 # Etherpad Loadtest
 ## Setup
 1. Enable Load Testing in your Etherpad ``settings.json`` by setting ``"loadTest":true``.
-2. Install etherpad-load-test globally via ``npm install -g etherpad-load-test``.
-3. Use etherpad-loadtest command (cf. Usage)
+2. Reload Etherpad instance.
+3. Install etherpad-load-test globally via ``npm install -g etherpad-load-test``.
+4. Use etherpad-loadtest command (cf. Usage).
+
+(**Important:** Don't forget to set ``"loadTest":false`` afterwards)
 
 ## Usage
 
@@ -15,12 +18,14 @@ You should modify your tests to your use case.
 
 ### Parameters
 ``-l`` number of lurkers.
+
 ``-a`` number of active authors.
+
 ``-d`` duration in seconds to test for. Default is unlimited.
 
 ### Examples
 - ``etherpad-loadtest``(Basic Example, url defaults to http://127.0.0.1:9001)
-- ``etherpad-loadtest http://127.0.0.1:9001`` (Test specific the Etherpad instance)
+- ``etherpad-loadtest http://127.0.0.1:9001`` (Test specific Etherpad instance)
 - ``etherpad-loadtest http://127.0.0.1:9001/p/test`` (Test specific Pad)
 - ``etherpad-loadtest -d 60`` (Test for 60 seconds)
 - ``etherpad-loadtest -l 50 -a 10`` (Test with 50 lurkers and 10 authors)
@@ -39,7 +44,7 @@ The above command will put 3 authors on 10 pads for 30 seconds. This creates a t
 Note that most authors will not contribute as agressively as our logic here, we implement max(worst case) user load testing.
 If you hit limitations, remember etherpad-proxy is a thing to rewrite to multiple backend instances 🔥
 
-*TODO/Note: Citation and test results needed.*
+*TODO/Note:* Citation and test results needed.
 
 ## License
 Apache 2
