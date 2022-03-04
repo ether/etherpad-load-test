@@ -1,3 +1,5 @@
+![Publish Status](https://github.com/ether/etherpad-load-test/workflows/Node.js%20Package/badge.svg) ![Backend Tests Status](https://github.com/ether/etherpad-load-test/workflows/Backend%20tests/badge.svg)
+
 # Etherpad Loadtest
 ## Setup
 1. Enable Load Testing in your Etherpad ``settings.json`` by setting ``"loadTest":true``.
