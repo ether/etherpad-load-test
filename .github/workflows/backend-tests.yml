@@ -18,7 +18,8 @@ jobs:
         name: Check out Etherpad core
         uses: actions/checkout@v3
         with:
-          repository: ether/etherpad-lite
+          repository: HMarzban/etherpad-lite
+          ref: socket.io@3
           path: ./etherpad
       -
         name: Checkout plugin repository
@@ -26,30 +27,42 @@ jobs:
         with:
           path: ./plugin
       -
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 12
-          cache: 'npm'
-          cache-dependency-path: |
-            etherpad/src/package-lock.json
-            etherpad/src/bin/doc/package-lock.json
-            plugin/package-lock.json
+          node-version: 20
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       -
         name: Prepare Etherpad core
         run: |
           cd ./etherpad/src
-          npm ci
-          npm link
+          ./bin/installDeps.sh
+          pnpm link --global
       -
         name: Prepare plugin
         run: |
+          pnpm config set auto-install-peers false
           cd ./plugin
           PLUGIN_NAME=$(npx -c 'printf %s\\n "${npm_package_name}"') || exit 1
-          npm ci
-          npm link
-          npm link ep_etherpad-lite
-          cd ../etherpad
-          npm link "${PLUGIN_NAME}"
+          pnpm i
+          pnpm link --global
+          pnpm link --global ep_etherpad-lite
+          cd ../etherpad/src
+          pnpm link --global "${PLUGIN_NAME}"
       -
         name: Run the backend tests
         run: |
