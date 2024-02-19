@@ -16,14 +16,14 @@ jobs:
     steps:
       -
         name: Check out Etherpad core
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: HMarzban/etherpad-lite
           ref: socket.io@3
           path: ./etherpad
       -
         name: Checkout plugin repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: ./plugin
       -
