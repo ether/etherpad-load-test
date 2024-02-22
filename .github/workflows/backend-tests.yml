@@ -49,7 +49,6 @@ jobs:
       -
         name: Prepare Etherpad core
         run: |
-          cd ./etherpad/src
           ./bin/installDeps.sh
           pnpm link --global
       -
