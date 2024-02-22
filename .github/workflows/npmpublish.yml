@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ether/etherpad-lite
+          ref: develop
           path: etherpad-lite
       -
         run: mv etherpad-lite ..
