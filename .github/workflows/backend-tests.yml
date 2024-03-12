@@ -18,8 +18,8 @@ jobs:
         name: Check out Etherpad core
         uses: actions/checkout@v4
         with:
-          repository: HMarzban/etherpad-lite
-          ref: socket.io@3
+          repository: ether/etherpad-lite
+          ref: develop
           path: ./etherpad
       -
         name: Checkout plugin repository
@@ -48,6 +48,7 @@ jobs:
             ${{ runner.os }}-pnpm-store-
       -
         name: Prepare Etherpad core
+        working-directory: ./etherpad
         run: |
           ./bin/installDeps.sh
           pnpm link --global

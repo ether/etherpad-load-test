@@ -34,9 +34,6 @@
     "etherpad-loadtest": "app.js",
     "etherpad-loadtest-multi": "multi.js"
   },
-  "peerDependencies": {
-    "ep_etherpad-lite": ">=1.8.6"
-  },
   "funding": {
     "type": "individual",
     "url": "https://etherpad.org/"
