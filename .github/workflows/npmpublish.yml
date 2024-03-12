@@ -45,6 +45,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
       -
+        working-directory: ./etherpad
         run: ./bin/installDeps.sh && pnpm link --global
       -
         run: |
