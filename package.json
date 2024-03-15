@@ -11,7 +11,7 @@
   "dependencies": {
     "argv": "*",
     "async": "*",
-    "etherpad-cli-client": "^3.0.1",
+    "etherpad-cli-client": "^3.0.2",
     "measured": "^1.1.0"
   },
   "devDependencies": {
