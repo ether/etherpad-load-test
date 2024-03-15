@@ -44,7 +44,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
       -
-        run: ./bin/installDeps.sh && pnpm link --global
+        run: ls -lisa &&./bin/installDeps.sh && pnpm link --global
       -
         run: |
           pnpm config set auto-install-peers false
