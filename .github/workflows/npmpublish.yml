@@ -1,5 +1,5 @@
-# This workflow will run tests using node and then publish a package to the npm registry when a release is created
-# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+# Build, lint, and publish to npm.
+# See: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
 
 name: Node.js Package
 
@@ -10,32 +10,30 @@ on:
       - main
       - master
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      -
-        uses: actions/checkout@v4
-        with:
-          repository: ether/etherpad-lite
-          path: etherpad-lite
-      -
-        run: mv etherpad-lite ..
-      -
-        uses: actions/checkout@v4
-      -
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 8
+          version: 10.33.2
           run_install: false
+
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
       - uses: actions/cache@v4
         name: Setup pnpm cache
         with:
@@ -43,27 +41,14 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      -
-        run: cd ../etherpad-lite && ./bin/installDeps.sh && pnpm link --global
-      -
-        run: |
-          pnpm config set auto-install-peers false
-          pnpm i
-      -
-        run: pnpm link --global etherpad
-      -
-        run: |
-          has_testcli_script () {
-            [[ $(pnpm run | grep "^  test" | wc -l) > 0 ]]
-          }
-          
-            if has_testcli_script; then
-            pnpm run test
-            else
-            echo "No test script found"
-            fi
-        name: Run tests if available
-      -
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Lint
         run: pnpm run lint
 
   publish-npm:
@@ -71,24 +56,26 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      -
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      -
-        uses: actions/setup-node@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: https://registry.npmjs.org/
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 8
+          version: 10.33.2
           run_install: false
+
       - name: Get pnpm store directory
         shell: bash
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
       - uses: actions/cache@v4
         name: Setup pnpm cache
         with:
@@ -96,27 +83,29 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-      - name: Only install direct dependencies
-        run: pnpm config set auto-install-peers false
-      -
-        name: Bump version (patch)
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bump version (patch)
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0) || exit 1
           NEW_COMMITS=$(git rev-list --count "${LATEST_TAG}"..) || exit 1
           [ "${NEW_COMMITS}" -gt 0 ] || exit 0
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          pnpm i
           pnpm version patch
           git push --follow-tags
-      -
-        run: pnpm i
-      -
-        run: pnpm publish
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Publish to npm
+        run: pnpm publish --no-git-checks
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-      -
-        name: Add package to etherpad organization
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Add package to etherpad organization
         run: npm access grant read-write etherpad:developers
         env:
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
