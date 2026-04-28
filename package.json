@@ -1,7 +1,8 @@
 {
   "name": "etherpad-load-test",
   "description": "Client to Load Test an Etherpad Instance",
-  "version": "1.0.11",
+  "version": "2.0.0",
+  "type": "module",
   "author": {
     "name": "John McLear",
     "email": "john@mclear.co.uk",
@@ -9,17 +10,17 @@
   },
   "contributors": [],
   "dependencies": {
-    "argv": "*",
-    "async": "*",
-    "etherpad-cli-client": "^3.0.2",
-    "measured": "^1.1.0"
+    "etherpad-cli-client": "^4.0.2"
   },
   "devDependencies": {
-    "eslint": "^8.11.0",
-    "eslint-config-etherpad": "^3.0.8",
-    "typescript": "*"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.12.7",
+    "eslint": "^9.32.0",
+    "typescript": "^5.4.2"
   },
   "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
@@ -31,9 +32,14 @@
     "url": "git+https://github.com/ether/etherpad-load-test.git"
   },
   "bin": {
-    "etherpad-loadtest": "app.js",
-    "etherpad-loadtest-multi": "multi.js"
+    "etherpad-loadtest": "dist/app.js",
+    "etherpad-loadtest-multi": "dist/multi.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "peerDependencies": {
     "ep_etherpad-lite": ">=1.8.6"
   },
