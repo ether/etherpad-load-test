@@ -50,7 +50,7 @@ Practical results gathered while investigating Etherpad performance:
 * Socket.IO throughput became an important ceiling in these tests: around 10k messages/sec on Linux VMs, with faster hosts sometimes pushing beyond that.
 * On a reasonable machine you can expect to achieve around 3 authors on 200 pads [node multi.js 200].
 
-Note that most authors will not contribute as agressively as our logic here, we implement max(worst case) user load testing.
+Note that most authors will not contribute as aggressively as our logic here, we implement max(worst case) user load testing.
 If you hit limitations, remember etherpad-proxy is a thing to rewrite to multiple backend instances 🔥
 
 ## License
