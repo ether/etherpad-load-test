@@ -40,13 +40,18 @@ You should modify your tests to your use case.
 The above command will put 3 authors on 10 pads for 30 seconds. This creates a total of 30 authors.
 
 ## Test Results
-* On a reasonable machine you can expect 40 authors on one pad. (-a 40)
-* On a reasonable machine you can expect to achieve around 3 authors on 200 pads [node multi.js 200]. 
+The CLI reports current, mean, and peak server-to-client commit rates so that you can compare your results against Socket.IO throughput limits. The raw benchmark notes are collected in [issue #1](https://github.com/ether/etherpad-load-test/issues/1).
+
+Practical results gathered while investigating Etherpad performance:
+
+* A safe working target on one busy pad is roughly 30 hyperactive authors.
+* Around 40 hyperactive authors and ~120 lurkers on one pad was where tests started to become too slow to be useful.
+* One author with 200 lurkers was stable in testing, but around 420-500 lurkers on one pad could saturate server CPU.
+* Socket.IO throughput became an important ceiling in these tests: around 10k messages/sec on Linux VMs, with faster hosts sometimes pushing beyond that.
+* On a reasonable machine you can expect to achieve around 3 authors on 200 pads [node multi.js 200].
 
 Note that most authors will not contribute as agressively as our logic here, we implement max(worst case) user load testing.
 If you hit limitations, remember etherpad-proxy is a thing to rewrite to multiple backend instances 🔥
-
-*TODO/Note:* Citation and test results needed.
 
 ## License
 Apache 2
