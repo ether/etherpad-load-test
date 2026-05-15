@@ -14,7 +14,7 @@ describe('makeConfig defaults', () => {
     expect(c.break.action).toBe('continue');
     expect(c.scrape.intervalMs).toBe(1000);
     expect(c.scrape.url).toBe('http://127.0.0.1:9001/stats/prometheus');
-    expect(c.scrape.keep).toContain('nodejs_eventloop_latency_gauge');
+    expect(c.scrape.keep).toContain('nodejs_eventloop_lag');
   });
 
   it('derives scrape url from sutUrl when not overridden', () => {

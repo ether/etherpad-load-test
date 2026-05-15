@@ -69,8 +69,13 @@ export class Reporter {
     };
     const rows = this.steps.map((s) => {
       const g = s.snapshot.gauges;
-      const rssBytes = g['nodejs_memory_process_gauge{type=rss}'];
+      // CSV column → /stats/prometheus row mapping. Names come from prom-client's
+      // collectDefaultMetrics output that etherpad core actually emits.
+      const rssBytes = g['process_resident_memory_bytes'];
       const rssMb = rssBytes !== undefined ? Math.round(rssBytes / 1_048_576) : undefined;
+      const evloopP95s = g['nodejs_eventloop_lag_p95_seconds'];
+      const evloopP95Ms = evloopP95s !== undefined ? Math.round(evloopP95s * 1000) : undefined;
+      const cpuUserS = g['process_cpu_user_seconds_total'];
       return [
         s.step,
         fmt(s.latencyMs.p50),
@@ -78,8 +83,8 @@ export class Reporter {
         fmt(s.latencyMs.p99),
         fmt(s.latencyMs.max),
         fmt(s.throughputCsps),
-        cell(g, 'nodejs_cpu_gauge{type=user}'),
-        cell(g, 'nodejs_eventloop_latency_gauge{type=p95}'),
+        fmt(cpuUserS),
+        fmt(evloopP95Ms),
         fmt(rssMb),
         cell(g, 'etherpad_total_users'),
         s.errors,
@@ -101,9 +106,11 @@ export class Reporter {
     ];
     const rows = this.steps.map((s) => {
       const g = s.snapshot.gauges;
-      const el = g['nodejs_eventloop_latency_gauge{type=p95}'] ?? '';
-      const cpu = g['nodejs_cpu_gauge{type=user}'] ?? '';
-      return `| ${s.step} | ${s.latencyMs.p50} | ${s.latencyMs.p95} | ${s.latencyMs.p99} | ${el} | ${cpu} | ${s.errors} | ${s.breakageFlags.join('|')} |`;
+      const elS = g['nodejs_eventloop_lag_p95_seconds'];
+      const elMs = elS !== undefined ? Math.round(elS * 1000) : '';
+      const cpuS = g['process_cpu_user_seconds_total'];
+      const cpu = cpuS !== undefined ? cpuS.toFixed(2) : '';
+      return `| ${s.step} | ${s.latencyMs.p50} | ${s.latencyMs.p95} | ${s.latencyMs.p99} | ${elMs} | ${cpu} | ${s.errors} | ${s.breakageFlags.join('|')} |`;
     });
 
     // Sparkline of p95
