@@ -1,0 +1,19 @@
+# HELP nodejs_cpu_gauge gauge for nodejs cpu
+# TYPE nodejs_cpu_gauge gauge
+nodejs_cpu_gauge{type="user"} 22.4
+nodejs_cpu_gauge{type="system"} 3.1
+
+# HELP nodejs_eventloop_latency_gauge gauge for nodejs_eventloop_latency
+# TYPE nodejs_eventloop_latency_gauge gauge
+nodejs_eventloop_latency_gauge{type="p50"} 0.8
+nodejs_eventloop_latency_gauge{type="p95"} 3.1
+
+# HELP etherpad_total_users Total number of users
+# TYPE etherpad_total_users gauge
+etherpad_total_users 60
+
+# HELP http_duration summary for http_duration
+# TYPE http_duration summary
+http_duration{url="/p/x",quantile="0.5"} 12
+http_duration_count{url="/p/x"} 100
+http_duration_sum{url="/p/x"} 1500
