@@ -59,6 +59,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
+          version: 11.1.2  # matches etherpad core's packageManager pin; required because no package.json sits at the runner root in this workflow
           run_install: false
 
       - name: Get pnpm store directory
