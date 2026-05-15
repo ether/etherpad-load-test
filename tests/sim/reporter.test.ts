@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, afterEach} from 'vitest';
-import {mkdtempSync, rmSync, readFileSync, existsSync} from 'node:fs';
+import {mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync as wfs} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {Reporter} from '../../src/sim/reporter.js';
@@ -113,5 +113,24 @@ describe('Reporter MD output', () => {
     expect(existsSync(paths.json)).toBe(true);
     expect(existsSync(paths.csv)).toBe(false);
     expect(existsSync(paths.md)).toBe(false);
+  });
+});
+
+describe('Reporter outDir collision', () => {
+  it('refuses to write when outDir is non-empty and force=false', async () => {
+    wfs(join(dir, 'sentinel'), 'x'); // dir is non-empty
+    const cfg = makeConfig({outDir: dir, force: false});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    r.addStep(stepResult(10, 20));
+    await expect(r.write()).rejects.toThrow(/non-empty/);
+  });
+
+  it('overwrites when force=true', async () => {
+    wfs(join(dir, 'sentinel'), 'x');
+    const cfg = makeConfig({outDir: dir, force: true});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    r.addStep(stepResult(10, 20));
+    const paths = await r.write();
+    expect(existsSync(paths.json)).toBe(true);
   });
 });

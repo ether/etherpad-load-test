@@ -1,4 +1,4 @@
-import {mkdirSync, writeFileSync} from 'node:fs';
+import {mkdirSync, writeFileSync, readdirSync} from 'node:fs';
 import {join} from 'node:path';
 import type {StepResult, RunMeta, Config, Report} from './types.js';
 
@@ -36,6 +36,17 @@ export class Reporter {
   }
 
   async write(): Promise<WrittenPaths> {
+    let existing: string[] = [];
+    try {
+      existing = readdirSync(this.opts.outDir);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== 'ENOENT') throw err;
+    }
+    if (existing.length > 0 && !this.opts.config.report.force) {
+      throw new Error(`report outDir is non-empty and --force was not set: ${this.opts.outDir}`);
+    }
+
     mkdirSync(this.opts.outDir, {recursive: true});
     const json = join(this.opts.outDir, 'report.json');
     writeFileSync(json, JSON.stringify(this.build(), null, 2));
