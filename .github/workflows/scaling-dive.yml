@@ -100,11 +100,11 @@ jobs:
           ' settings.json.template > settings.json
 
           # Enable the scaling-dive metrics added in ether/etherpad#7762.
-          # The key isn't in settings.json.template yet (defaults to false in
-          # Settings.ts), so we inject it. Use node so JSON manipulation
-          # stays valid regardless of key ordering / whitespace.
-          node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('settings.json','utf8')); s.scalingDiveMetrics=true; fs.writeFileSync('settings.json', JSON.stringify(s, null, 2));"
-          echo 'enabled: scalingDiveMetrics = true'
+          # settings.json.template doesn't ship the key yet (defaults to false
+          # in Settings.ts), so we sed-append it after the loadTest line.
+          # Can't use JSON.parse because the file keeps its JSONC comments.
+          sed -i '/"loadTest": true,/a\  "scalingDiveMetrics": true,' settings.json
+          grep scalingDiveMetrics settings.json || { echo "failed to enable scalingDiveMetrics"; exit 1; }
 
           case "${{ matrix.lever }}" in
             baseline)
