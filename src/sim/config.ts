@@ -29,16 +29,24 @@ export interface ConfigInput {
   force?: boolean;
 }
 
+// Default allowlist. Names come from what etherpad core's /stats/prometheus
+// actually emits: a few etherpad_-prefixed custom rows plus the prom-client
+// default metrics (process_cpu_*, process_resident_memory_bytes,
+// nodejs_eventloop_lag_*). Names are matched as prefixes against the base
+// metric name (before `{labels}`).
 const DEFAULT_KEEP = [
-  'nodejs_cpu_gauge',
-  'nodejs_eventloop_latency_gauge',
-  'nodejs_memory_process_gauge',
-  'nodejs_gc_gauge',
-  'etherpad_total_users',
-  'etherpad_active_pads',
-  'etherpad_pad_users',
-  'etherpad_changeset_apply_duration_seconds',
-  'etherpad_socket_emits_total',
+  // etherpad custom (active + planned via ether/etherpad#7762)
+  'etherpad_',
+  // prom-client defaults
+  'process_cpu_',                  // process_cpu_user_seconds_total, _system_seconds_total
+  'process_resident_memory_bytes', // RSS
+  'process_heap_bytes',
+  'nodejs_eventloop_lag',          // nodejs_eventloop_lag_seconds + _p50/_p95/_p99/_max
+  'nodejs_heap_size',
+  'nodejs_active_handles',
+  'nodejs_gc_duration_seconds',
+  // ueberdb
+  'ueberdb_stats',
 ];
 
 const requireNonNeg = (name: string, v: number | undefined): void => {
