@@ -66,3 +66,53 @@ describe('Harness.run sweep', () => {
     }
   });
 });
+
+describe('Harness breakage thresholds', () => {
+  it('flags a step when p95 exceeds break.p95Ms', async () => {
+    StubAuthor.instances = [];
+    vi.useFakeTimers();
+    const dir = mkdtempSync(join(tmpdir(), 'h-'));
+    try {
+      const cfg = makeConfig({
+        outDir: dir,
+        sweep: {axis: 'authors', min: 1, max: 1, step: 1, warmupMs: 1, dwellMs: 10},
+        breakP95Ms: 50,
+      });
+      const h = new Harness(cfg, new StubScraper() as never,
+                            { authorFactory: () => new StubAuthor() as never });
+      const p = h.run();
+      await vi.advanceTimersByTimeAsync(2);
+      StubAuthor.instances.forEach((a) => a.inject(100, 10));
+      await vi.advanceTimersByTimeAsync(20);
+      const report = await p;
+      expect(report.steps[0]!.breakageFlags).toContain('p95');
+    } finally {
+      rmSync(dir, {recursive: true, force: true});
+    }
+  });
+
+  it('continues past breakage by default (action=continue)', async () => {
+    StubAuthor.instances = [];
+    vi.useFakeTimers();
+    const dir = mkdtempSync(join(tmpdir(), 'h-'));
+    try {
+      const cfg = makeConfig({
+        outDir: dir,
+        sweep: {axis: 'authors', min: 1, max: 2, step: 1, warmupMs: 1, dwellMs: 10},
+        breakP95Ms: 50,
+      });
+      const h = new Harness(cfg, new StubScraper() as never,
+                            { authorFactory: () => new StubAuthor() as never });
+      const p = h.run();
+      for (let i = 0; i < 2; i++) {
+        await vi.advanceTimersByTimeAsync(2);
+        StubAuthor.instances.forEach((a) => a.inject(100, 10));
+        await vi.advanceTimersByTimeAsync(20);
+      }
+      const report = await p;
+      expect(report.steps).toHaveLength(2);
+    } finally {
+      rmSync(dir, {recursive: true, force: true});
+    }
+  });
+});
