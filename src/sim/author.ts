@@ -4,7 +4,7 @@ import type {Sample} from './types.js';
 
 export interface PadLike extends EventEmitter {
   append(s: string): void;
-  disconnect(): void;
+  close(): void;
 }
 
 export interface AuthorOpts {
@@ -36,13 +36,18 @@ export class Author extends EventEmitter {
 
   constructor(private readonly opts: AuthorOpts) { super(); }
 
-  async connect(): Promise<void> {
+  connect(): Promise<void> {
     const factory = this.opts.padFactory ?? ((u) => connect(u) as unknown as PadLike);
     this.pad = factory(this.opts.url);
-    this.pad.on('connect_error', () => this.emit('drop'));
-    this.pad.on('connect_timeout', () => this.emit('drop'));
-    this.pad.on('message', (m: CollabMsg) => this.onMessage(m));
-    this.pad.on('disconnected', () => this.emit('drop'));
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void): void => { if (!settled) { settled = true; fn(); } };
+      this.pad!.on('connected', () => settle(resolve));
+      this.pad!.on('connect_error', (e: Error) => settle(() => reject(e ?? new Error('connect_error'))));
+      this.pad!.on('connect_timeout', () => settle(() => reject(new Error('connect_timeout'))));
+      this.pad!.on('message', (m: CollabMsg) => this.onMessage(m));
+      this.pad!.on('disconnect', () => this.emit('drop'));
+    });
   }
 
   start(): void {
@@ -53,7 +58,7 @@ export class Author extends EventEmitter {
   async stop(): Promise<void> {
     this.stopped = true;
     if (this.timer) { clearInterval(this.timer); this.timer = undefined; }
-    try { this.pad?.disconnect(); } catch { /* swallow */ }
+    try { this.pad?.close(); } catch { /* swallow */ }
   }
 
   drainSamples(): Sample[] {

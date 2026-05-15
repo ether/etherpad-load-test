@@ -5,7 +5,7 @@ import {Author, type PadLike} from '../../src/sim/author.js';
 class StubPad extends EventEmitter implements PadLike {
   appended: string[] = [];
   append(s: string): void { this.appended.push(s); this.emitAck(); }
-  disconnect(): void { this.emit('disconnected'); }
+  close(): void { this.emit('disconnect'); }
   private ackQueue: number[] = [];
   /** Schedule an ACCEPT_COMMIT to fire `delayMs` after the next append() */
   scheduleAck(delayMs: number): void { this.ackQueue.push(delayMs); }
@@ -17,15 +17,23 @@ class StubPad extends EventEmitter implements PadLike {
   }
 }
 
+/** Construct an Author, attach listeners, schedule the 'connected' emit, then await connect(). */
+const connectedAuthor = async (pad: StubPad, opts: {authorName: string; editIntervalMs?: number}): Promise<Author> => {
+  const a = new Author({
+    url: 'http://x', padId: 'p', authorName: opts.authorName,
+    editIntervalMs: opts.editIntervalMs ?? 100, padFactory: () => pad,
+  });
+  const p = a.connect();
+  queueMicrotask(() => pad.emit('connected', {}));
+  await p;
+  return a;
+};
+
 describe('Author', () => {
   it('records latency for each ACCEPT_COMMIT in FIFO order', async () => {
     vi.useFakeTimers();
     const pad = new StubPad();
-    const factory = () => pad;
-    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a1',
-                          editIntervalMs: 100, padFactory: factory});
-    await a.connect();
-    pad.emit('connected', {});
+    const a = await connectedAuthor(pad, {authorName: 'a1'});
     pad.scheduleAck(50);
     a.start();
     await vi.advanceTimersByTimeAsync(100); // one append fires
@@ -39,12 +47,9 @@ describe('Author', () => {
   it('does not lose FIFO order across multiple in-flight acks', async () => {
     vi.useFakeTimers();
     const pad = new StubPad();
-    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a2',
-                          editIntervalMs: 100, padFactory: () => pad});
-    await a.connect();
-    pad.emit('connected', {});
-    pad.scheduleAck(150); // first append's ack
-    pad.scheduleAck(20);  // second append's ack
+    const a = await connectedAuthor(pad, {authorName: 'a2'});
+    pad.scheduleAck(150);
+    pad.scheduleAck(20);
     a.start();
     await vi.advanceTimersByTimeAsync(250);
     const samples = a.drainSamples();
@@ -55,10 +60,7 @@ describe('Author', () => {
   it('drainSamples clears the buffer', async () => {
     vi.useFakeTimers();
     const pad = new StubPad();
-    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a3',
-                          editIntervalMs: 100, padFactory: () => pad});
-    await a.connect();
-    pad.emit('connected', {});
+    const a = await connectedAuthor(pad, {authorName: 'a3'});
     pad.scheduleAck(10);
     a.start();
     await vi.advanceTimersByTimeAsync(120);
@@ -72,12 +74,9 @@ describe('Author disconnect-class events', () => {
   it('counts badChangeset disconnect as error and emits drop', async () => {
     vi.useFakeTimers();
     const pad = new StubPad();
-    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a4',
-                          editIntervalMs: 100, padFactory: () => pad});
+    const a = await connectedAuthor(pad, {authorName: 'a4'});
     let dropped = 0;
     a.on('drop', () => dropped++);
-    await a.connect();
-    pad.emit('connected', {});
     pad.emit('message', {type: 'COLLABROOM', data: {type: 'CLIENT_MESSAGE'}});
     pad.emit('message', {disconnect: 'badChangeset'});
     expect(a.getErrors()).toBe(1);
@@ -88,15 +87,23 @@ describe('Author disconnect-class events', () => {
   it('counts rateLimited disconnect with the rateLimited flag set', async () => {
     vi.useFakeTimers();
     const pad = new StubPad();
-    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a5',
-                          editIntervalMs: 100, padFactory: () => pad});
+    const a = await connectedAuthor(pad, {authorName: 'a5'});
     let rateLimited = false;
     a.on('rateLimited', () => { rateLimited = true; });
-    await a.connect();
-    pad.emit('connected', {});
     pad.emit('message', {disconnect: 'rateLimited'});
     expect(a.getErrors()).toBe(1);
     expect(rateLimited).toBe(true);
+    await a.stop();
+  });
+
+  it('emits drop on socket-level disconnect event', async () => {
+    vi.useFakeTimers();
+    const pad = new StubPad();
+    const a = await connectedAuthor(pad, {authorName: 'a6'});
+    let dropped = 0;
+    a.on('drop', () => dropped++);
+    pad.emit('disconnect', 'network gone');
+    expect(dropped).toBe(1);
     await a.stop();
   });
 });
