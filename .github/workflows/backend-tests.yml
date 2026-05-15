@@ -56,6 +56,11 @@ jobs:
           pnpm run build
           pnpm link --global
 
+      - name: Run unit tests
+        run: |
+          cd ./loadtest
+          pnpm test
+
       - name: Install Etherpad core dependencies
         run: |
           cd ./etherpad
@@ -65,3 +70,18 @@ jobs:
         run: |
           cd ./etherpad
           src/tests/frontend/travis/runnerLoadTest.sh 25 50
+
+      - name: Run sweep integration test
+        env:
+          LOADTEST_INTEGRATION_URL: http://127.0.0.1:9001
+        run: |
+          # The previous step (runnerLoadTest.sh) tore Etherpad down, so
+          # bring a minimal one back up just for the sweep integration test.
+          cd ./etherpad
+          (cd src && pnpm run prod &)
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:9001/ >/dev/null && break
+            sleep 1
+          done
+          cd ../loadtest
+          pnpm test:integration
