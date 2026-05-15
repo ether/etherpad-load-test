@@ -1,6 +1,6 @@
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import type {StepResult, RunMeta, Config} from './types.js';
+import type {StepResult, RunMeta, Config, Report} from './types.js';
 
 export interface ReporterOpts {
   outDir: string;
@@ -21,17 +21,18 @@ export class Reporter {
 
   addStep(s: StepResult): void { this.steps.push(s); }
 
-  build(): Record<string, unknown> {
-    return {
+  build(): Report {
+    const r: Report = {
       runId: this.opts.runMeta.runId,
       startedAt: this.opts.runMeta.startedAt,
       finishedAt: this.opts.runMeta.finishedAt,
-      partial: this.opts.runMeta.partial === true ? true : undefined,
       sut: this.opts.runMeta.sut,
       machine: this.opts.runMeta.machine,
       config: this.opts.config,
       steps: this.steps,
     };
+    if (this.opts.runMeta.partial === true) r.partial = true;
+    return r;
   }
 
   async write(): Promise<WrittenPaths> {

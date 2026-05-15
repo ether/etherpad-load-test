@@ -93,7 +93,7 @@ export class Harness {
     }
 
     meta.finishedAt = now().toISOString();
-    return reporter.build() as Report;
+    return reporter.build();
   }
 
   private flags(

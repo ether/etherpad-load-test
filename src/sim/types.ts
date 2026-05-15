@@ -86,7 +86,12 @@ export interface Config {
 }
 
 export interface Report {
-  meta: RunMeta;
+  runId: string;
+  startedAt: string;
+  finishedAt: string;
+  partial?: boolean;
+  sut: RunMeta['sut'];
+  machine: MachineInfo;
   config: Config;
   steps: StepResult[];
 }
