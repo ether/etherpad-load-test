@@ -66,7 +66,7 @@ describe('Reporter CSV output', () => {
     const paths = await r.write();
     const csv = readFileSync(paths.csv, 'utf8');
     const lines = csv.trim().split('\n');
-    expect(lines[0]).toBe('step,p50,p95,p99,max,throughput_csps,cpu_user,evloop_p95_ms,rss_mb,users,errors,break');
+    expect(lines[0]).toBe('step,p50,p95,p99,max,throughput_csps,cpu_user,evloop_p99_ms,rss_mb,users,apply_mean_ms,emits_new_changes,errors,break');
     expect(lines[1]!.split(',')[0]).toBe('10');
     expect(lines[1]!.split(',')[1]).toBe('20');
     expect(lines[2]!.split(',')[0]).toBe('20');
@@ -81,11 +81,13 @@ describe('Reporter CSV output', () => {
     const paths = await r.write();
     const csv = readFileSync(paths.csv, 'utf8');
     const cols = csv.trim().split('\n')[1]!.split(',');
-    // step,p50,p95,p99,max,throughput_csps,<cpu_user>,<evloop_p95_ms>,<rss_mb>,<users>,errors,break
-    expect(cols[6]).toBe(''); // cpu_user missing
-    expect(cols[7]).toBe(''); // evloop missing
-    expect(cols[8]).toBe(''); // rss missing
-    expect(cols[9]).toBe(''); // users missing
+    // step,p50,p95,p99,max,throughput_csps,<cpu_user>,<evloop_p99_ms>,<rss_mb>,<users>,<apply_mean_ms>,<emits_new_changes>,errors,break
+    expect(cols[6]).toBe('');  // cpu_user missing
+    expect(cols[7]).toBe('');  // evloop missing
+    expect(cols[8]).toBe('');  // rss missing
+    expect(cols[9]).toBe('');  // users missing
+    expect(cols[10]).toBe(''); // apply_mean_ms missing
+    expect(cols[11]).toBe(''); // emits_new_changes missing
   });
 });
 
