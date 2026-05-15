@@ -29,11 +29,11 @@ jobs:
   dive:
     name: dive · ${{ matrix.lever }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        lever: [baseline, websocket-only, nodemem]
+        lever: [baseline, websocket-only, nodemem, fanout-debounce]
 
     env:
       PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
@@ -118,6 +118,12 @@ jobs:
             nodemem)
               # No settings change; NODE_OPTIONS is set when launching below.
               echo "applied via NODE_OPTIONS"
+              ;;
+            fanout-debounce)
+              # Lever 3: coalesce per-pad fan-out within a 50ms window
+              # (requires ether/etherpad#7766 in the checked-out core_ref).
+              sed -i '/"loadTest": true,/a\  "fanoutDebounceMs": 50,' settings.json
+              grep fanoutDebounceMs settings.json || { echo "fanoutDebounceMs not present — core must include #7766"; exit 1; }
               ;;
             *)
               echo "unknown lever: ${{ matrix.lever }}" >&2
