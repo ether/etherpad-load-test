@@ -16,7 +16,7 @@ export interface AuthorOpts {
   padFactory?: (url: string) => PadLike;
 }
 
-type CollabMsg = {type?: string; data?: {type?: string}};
+type CollabMsg = {type?: string; data?: {type?: string}; disconnect?: string};
 
 const randomText = (len = 4): string => {
   let s = '';
@@ -76,9 +76,14 @@ export class Author extends EventEmitter {
   }
 
   private onMessage(m: CollabMsg): void {
+    if (typeof m.disconnect === 'string') {
+      this.errors++;
+      if (m.disconnect === 'rateLimited') this.emit('rateLimited');
+      this.emit('drop');
+      return;
+    }
     if (m.type !== 'COLLABROOM') return;
-    const t = m.data?.type;
-    if (t === 'ACCEPT_COMMIT') {
+    if (m.data?.type === 'ACCEPT_COMMIT') {
       const sent = this.inFlight.shift();
       if (sent === undefined) return;
       const ackedAt = process.hrtime.bigint();

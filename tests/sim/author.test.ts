@@ -67,3 +67,36 @@ describe('Author', () => {
     await a.stop();
   });
 });
+
+describe('Author disconnect-class events', () => {
+  it('counts badChangeset disconnect as error and emits drop', async () => {
+    vi.useFakeTimers();
+    const pad = new StubPad();
+    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a4',
+                          editIntervalMs: 100, padFactory: () => pad});
+    let dropped = 0;
+    a.on('drop', () => dropped++);
+    await a.connect();
+    pad.emit('connected', {});
+    pad.emit('message', {type: 'COLLABROOM', data: {type: 'CLIENT_MESSAGE'}});
+    pad.emit('message', {disconnect: 'badChangeset'});
+    expect(a.getErrors()).toBe(1);
+    expect(dropped).toBeGreaterThanOrEqual(1);
+    await a.stop();
+  });
+
+  it('counts rateLimited disconnect with the rateLimited flag set', async () => {
+    vi.useFakeTimers();
+    const pad = new StubPad();
+    const a = new Author({url: 'http://x', padId: 'p', authorName: 'a5',
+                          editIntervalMs: 100, padFactory: () => pad});
+    let rateLimited = false;
+    a.on('rateLimited', () => { rateLimited = true; });
+    await a.connect();
+    pad.emit('connected', {});
+    pad.emit('message', {disconnect: 'rateLimited'});
+    expect(a.getErrors()).toBe(1);
+    expect(rateLimited).toBe(true);
+    await a.stop();
+  });
+});
