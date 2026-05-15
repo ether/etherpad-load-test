@@ -99,6 +99,13 @@ jobs:
             s!"points":[^,]*!"points": 1000!
           ' settings.json.template > settings.json
 
+          # Enable the scaling-dive metrics added in ether/etherpad#7762.
+          # The key isn't in settings.json.template yet (defaults to false in
+          # Settings.ts), so we inject it. Use node so JSON manipulation
+          # stays valid regardless of key ordering / whitespace.
+          node -e "const fs=require('fs'); const s=JSON.parse(fs.readFileSync('settings.json','utf8')); s.scalingDiveMetrics=true; fs.writeFileSync('settings.json', JSON.stringify(s, null, 2));"
+          echo 'enabled: scalingDiveMetrics = true'
+
           case "${{ matrix.lever }}" in
             baseline)
               echo "baseline — no further settings tweaks"
