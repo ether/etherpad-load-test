@@ -39,9 +39,11 @@ export class Reporter {
     const json = join(this.opts.outDir, 'report.json');
     writeFileSync(json, JSON.stringify(this.build(), null, 2));
     const csv = join(this.opts.outDir, 'report.csv');
-    writeFileSync(csv, this.toCsv());
     const md = join(this.opts.outDir, 'report.md');
-    // MD written in later task
+    if (!this.opts.config.report.jsonOnly) {
+      writeFileSync(csv, this.toCsv());
+      writeFileSync(md, this.toMd());
+    }
     return {json, csv, md};
   }
 
@@ -73,5 +75,39 @@ export class Reporter {
       ].join(',');
     });
     return [header, ...rows].join('\n') + '\n';
+  }
+
+  private toMd(): string {
+    const m = this.opts.runMeta;
+    const header = [
+      `# Etherpad scaling sweep — ${m.startedAt}`,
+      `Run: ${m.runId}`,
+      `SUT: ${m.sut.gitSha ?? '?'} (${m.sut.version ?? '?'}) on ${m.machine.cpus} · ${m.machine.totalMemMB} MB · node ${m.machine.node}`,
+      '',
+      '| Step | p50 | p95 | p99 | EL p95 | CPU% | Errors | Break |',
+      '|---:|---:|---:|---:|---:|---:|---:|:---|',
+    ];
+    const rows = this.steps.map((s) => {
+      const g = s.snapshot.gauges;
+      const el = g['nodejs_eventloop_latency_gauge{type=p95}'] ?? '';
+      const cpu = g['nodejs_cpu_gauge{type=user}'] ?? '';
+      return `| ${s.step} | ${s.latencyMs.p50} | ${s.latencyMs.p95} | ${s.latencyMs.p99} | ${el} | ${cpu} | ${s.errors} | ${s.breakageFlags.join('|')} |`;
+    });
+
+    // Sparkline of p95
+    const maxP95 = Math.max(1, ...this.steps.map((s) => s.latencyMs.p95));
+    const spark = this.steps.map((s) => {
+      const bars = Math.max(1, Math.round((s.latencyMs.p95 / maxP95) * 30));
+      return `  ${String(s.step).padStart(4)} ${'▏'.repeat(bars)} ${s.latencyMs.p95}`;
+    });
+
+    return [
+      ...header,
+      ...rows,
+      '',
+      'p95 latency (ms) vs concurrency:',
+      ...spark,
+      '',
+    ].join('\n');
   }
 }

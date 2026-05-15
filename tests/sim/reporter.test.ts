@@ -88,3 +88,30 @@ describe('Reporter CSV output', () => {
     expect(cols[9]).toBe(''); // users missing
   });
 });
+
+describe('Reporter MD output', () => {
+  it('writes a markdown summary with table + sparkline', async () => {
+    const cfg = makeConfig({outDir: dir});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    r.addStep(stepResult(10, 20));
+    r.addStep(stepResult(20, 40));
+    const paths = await r.write();
+    const md = readFileSync(paths.md, 'utf8');
+    expect(md).toContain('# Etherpad scaling sweep');
+    expect(md).toContain('test-run');
+    expect(md).toContain('| Step | p50 | p95 |');
+    expect(md).toContain('| 10 ');
+    expect(md).toContain('| 20 ');
+    expect(md).toContain('p95 latency (ms) vs concurrency');
+  });
+
+  it('jsonOnly skips csv and md', async () => {
+    const cfg = makeConfig({outDir: dir, jsonOnly: true});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    r.addStep(stepResult(10, 20));
+    const paths = await r.write();
+    expect(existsSync(paths.json)).toBe(true);
+    expect(existsSync(paths.csv)).toBe(false);
+    expect(existsSync(paths.md)).toBe(false);
+  });
+});
