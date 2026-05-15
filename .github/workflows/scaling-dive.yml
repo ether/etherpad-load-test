@@ -1,0 +1,177 @@
+name: Scaling dive
+
+# Runs Phase 2 of the scaling-dive program (ether/etherpad#7756).
+# For each lever, spawns an Etherpad with that lever applied, runs the
+# harness sweep against it, and uploads report.{json,csv,md} as an
+# artifact. Use `gh run download <run-id>` to fetch all reports and
+# compose the dive document from them.
+#
+# This is workflow_dispatch only — not on push/PR — because the run
+# takes ~5-10 minutes per lever and the artifacts are for one-shot
+# comparison runs, not continuous gating.
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: 'ether/etherpad ref to test against (branch / tag / SHA)'
+        default: 'develop'
+        type: string
+      sweep:
+        description: 'sweep spec (CLI form, e.g. authors=10..80:step=10:dwell=15s:warmup=3s)'
+        default: 'authors=10..80:step=10:dwell=15s:warmup=3s'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  dive:
+    name: dive · ${{ matrix.lever }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        lever: [baseline, websocket-only, nodemem]
+
+    env:
+      PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+      # NODE_OPTIONS gets overridden per-lever inside the run step.
+
+    steps:
+      - name: Checkout etherpad-load-test
+        uses: actions/checkout@v4
+        with:
+          path: ./loadtest
+
+      - name: Checkout etherpad core (${{ inputs.core_ref }})
+        uses: actions/checkout@v4
+        with:
+          repository: ether/etherpad
+          ref: ${{ inputs.core_ref }}
+          path: ./etherpad
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Build and link etherpad-load-test
+        run: |
+          cd ./loadtest
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm link --global
+
+      - name: Install Etherpad core dependencies
+        run: |
+          cd ./etherpad
+          pnpm install --frozen-lockfile
+
+      - name: Apply lever settings
+        working-directory: ./etherpad
+        run: |
+          # Base settings.json: loadTest=true, relaxed rate limit, big import buffer.
+          sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 100000000/' -i settings.json.template
+          sed -e '
+            s!"loadTest":[^,]*!"loadTest": true!
+            s!"points":[^,]*!"points": 1000!
+          ' settings.json.template > settings.json
+
+          case "${{ matrix.lever }}" in
+            baseline)
+              echo "baseline — no further settings tweaks"
+              ;;
+            websocket-only)
+              # Drop polling: socket.io uses raw WS only.
+              sed -i 's!"socketTransportProtocols" *: *\[[^]]*\]!"socketTransportProtocols": ["websocket"]!' settings.json
+              echo "applied: socketTransportProtocols = ['websocket']"
+              ;;
+            nodemem)
+              # No settings change; NODE_OPTIONS is set when launching below.
+              echo "applied via NODE_OPTIONS"
+              ;;
+            *)
+              echo "unknown lever: ${{ matrix.lever }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Start Etherpad in the background
+        working-directory: ./etherpad
+        run: |
+          if [ "${{ matrix.lever }}" = "nodemem" ]; then
+            export NODE_OPTIONS="--max-old-space-size=4096"
+          fi
+          (cd src && pnpm run prod >../ep.log 2>&1 &)
+          echo "Waiting for http://127.0.0.1:9001 to accept connections..."
+          for i in $(seq 1 90); do
+            curl -sf http://127.0.0.1:9001/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:9001/ >/dev/null || { echo "Etherpad failed to start"; tail -n 100 ep.log; exit 1; }
+          echo "Etherpad is up."
+
+      - name: Snapshot baseline metrics
+        run: |
+          curl -sf http://127.0.0.1:9001/stats/prometheus > baseline-metrics.txt || true
+          head -40 baseline-metrics.txt || true
+
+      - name: Run sweep
+        working-directory: ./loadtest
+        run: |
+          mkdir -p ./out
+          # Capture machine info for the report meta. The harness reads /stats/prometheus directly.
+          etherpad-loadtest \
+            http://127.0.0.1:9001 \
+            --sweep "${{ inputs.sweep }}" \
+            --report "./out" \
+            --run-id "${{ matrix.lever }}-$(echo '${{ inputs.core_ref }}' | tr '/' '-')" \
+            --force
+
+      - name: Show report summary
+        if: always()
+        working-directory: ./loadtest
+        run: |
+          ls -la ./out || true
+          if [ -f ./out/report.md ]; then
+            echo '## report.md (excerpt)'
+            head -60 ./out/report.md
+          fi
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaling-dive-${{ matrix.lever }}
+          path: |
+            loadtest/out/report.json
+            loadtest/out/report.csv
+            loadtest/out/report.md
+          if-no-files-found: error
+
+      - name: Upload Etherpad log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ep-log-${{ matrix.lever }}
+          path: etherpad/ep.log
+          if-no-files-found: ignore
