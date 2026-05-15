@@ -3,6 +3,8 @@ import {fork} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, join} from 'node:path';
 
+// Preserves the original behaviour of etherpad-loadtest-multi: spawn N
+// child processes, each running `app.js -a 3 -d 30`, count messages.
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appPath = join(__dirname, 'app.js');
 
@@ -16,7 +18,5 @@ for (let padCount = 0; padCount < maxPads; padCount++) {
     console.log('total messages', messageCount);
     process.exit(1);
   });
-  child.on('message', () => {
-    messageCount++;
-  });
+  child.on('message', () => { messageCount++; });
 }
