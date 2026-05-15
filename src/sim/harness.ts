@@ -45,22 +45,51 @@ export class Harness {
 
     this.scraper.start();
     const authors: Author[] = [];
-    let counter = 0;
+    const lurkers: Author[] = [];
+    let authorCounter = 0;
+    let droppedAuthorsTotal = 0;
+
+    const spawn = async (
+      kind: 'author' | 'lurker',
+      count: number,
+      indexBase: number,
+    ): Promise<{live: Author[]; dropped: number}> => {
+      const candidates = Array.from({length: count}, (_, i) => factory({
+        url: this.cfg.sutUrl,
+        padId: this.cfg.padId ?? 'loadtest',
+        authorName: `${kind === 'lurker' ? 'l' : 'a'}${indexBase + i + 1}`,
+        editIntervalMs: this.cfg.editIntervalMs,
+      }));
+      const results = await Promise.allSettled(candidates.map((a) => a.connect()));
+      const live: Author[] = [];
+      let dropped = 0;
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') live.push(candidates[i]!);
+        else dropped++;
+      });
+      return {live, dropped};
+    };
 
     try {
+      // Lurkers: spawn once at the start, never start(), hold sockets across the sweep.
+      if (this.cfg.lurkers > 0) {
+        const {live, dropped} = await spawn('lurker', this.cfg.lurkers, 0);
+        lurkers.push(...live);
+        droppedAuthorsTotal += dropped; // attributed to first step below
+      }
+
       for (let n = sweep.min; n <= sweep.max; n += sweep.step) {
         const delta = n - authors.length;
-        for (let i = 0; i < delta; i++) {
-          const a = factory({
-            url: this.cfg.sutUrl,
-            padId: this.cfg.padId ?? 'loadtest',
-            authorName: `a${++counter}`,
-            editIntervalMs: this.cfg.editIntervalMs,
-          });
-          await a.connect();
-          a.start();
-          authors.push(a);
+        let stepDropped = 0;
+        if (delta > 0) {
+          const {live, dropped} = await spawn('author', delta, authorCounter);
+          authorCounter += delta;
+          for (const a of live) { a.start(); authors.push(a); }
+          stepDropped = dropped;
         }
+        // Lurker connect failures roll into the first step that records them, so the
+        // curve's first row reflects total concurrency shortfall, not a silent miss.
+        if (droppedAuthorsTotal > 0) { stepDropped += droppedAuthorsTotal; droppedAuthorsTotal = 0; }
         // warmup
         await sleep(sweep.warmupMs);
         for (const a of authors) a.drainSamples();
@@ -79,7 +108,7 @@ export class Harness {
           latencyMs: summary,
           throughputCsps,
           snapshot,
-          droppedAuthors: 0,
+          droppedAuthors: stepDropped,
           errors,
           breakageFlags,
           samples: this.cfg.report.keepRawSamples ? samples : null,
@@ -89,6 +118,7 @@ export class Harness {
       }
     } finally {
       for (const a of authors) await a.stop();
+      for (const l of lurkers) await l.stop();
       await this.scraper.stop();
     }
 
