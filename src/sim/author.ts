@@ -1,0 +1,89 @@
+import {EventEmitter} from 'node:events';
+import {connect} from 'etherpad-cli-client';
+import type {Sample} from './types.js';
+
+export interface PadLike extends EventEmitter {
+  append(s: string): void;
+  disconnect(): void;
+}
+
+export interface AuthorOpts {
+  url: string;
+  padId: string;
+  authorName: string;
+  editIntervalMs: number;
+  /** Override for tests. Defaults to the real etherpad-cli-client connect. */
+  padFactory?: (url: string) => PadLike;
+}
+
+type CollabMsg = {type?: string; data?: {type?: string}};
+
+const randomText = (len = 4): string => {
+  let s = '';
+  for (let i = 0; i < len; i++) {
+    s += String.fromCharCode(Math.floor(Math.random() * 26) + 97);
+  }
+  return s;
+};
+
+export class Author extends EventEmitter {
+  private pad?: PadLike;
+  private timer?: NodeJS.Timeout;
+  private samples: Sample[] = [];
+  private inFlight: bigint[] = [];
+  private errors = 0;
+  private stopped = false;
+
+  constructor(private readonly opts: AuthorOpts) { super(); }
+
+  async connect(): Promise<void> {
+    const factory = this.opts.padFactory ?? ((u) => connect(u) as unknown as PadLike);
+    this.pad = factory(this.opts.url);
+    this.pad.on('connect_error', () => this.emit('drop'));
+    this.pad.on('connect_timeout', () => this.emit('drop'));
+    this.pad.on('message', (m: CollabMsg) => this.onMessage(m));
+    this.pad.on('disconnected', () => this.emit('drop'));
+  }
+
+  start(): void {
+    if (this.timer) return;
+    this.timer = setInterval(() => this.tick(), this.opts.editIntervalMs);
+  }
+
+  async stop(): Promise<void> {
+    this.stopped = true;
+    if (this.timer) { clearInterval(this.timer); this.timer = undefined; }
+    try { this.pad?.disconnect(); } catch { /* swallow */ }
+  }
+
+  drainSamples(): Sample[] {
+    const out = this.samples;
+    this.samples = [];
+    return out;
+  }
+
+  getErrors(): number { return this.errors; }
+
+  private tick(): void {
+    if (this.stopped || !this.pad) return;
+    try {
+      this.inFlight.push(process.hrtime.bigint());
+      this.pad.append(randomText());
+    } catch {
+      this.errors++;
+      this.emit('error');
+    }
+  }
+
+  private onMessage(m: CollabMsg): void {
+    if (m.type !== 'COLLABROOM') return;
+    const t = m.data?.type;
+    if (t === 'ACCEPT_COMMIT') {
+      const sent = this.inFlight.shift();
+      if (sent === undefined) return;
+      const ackedAt = process.hrtime.bigint();
+      const latencyMs = Number(ackedAt - sent) / 1_000_000;
+      this.samples.push({authorId: this.opts.authorName, sentAtNs: sent, ackedAtNs: ackedAt, latencyMs});
+    }
+  }
+}
