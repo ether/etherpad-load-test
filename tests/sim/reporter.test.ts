@@ -56,3 +56,35 @@ describe('Reporter JSON output', () => {
     expect(j.partial).toBe(true);
   });
 });
+
+describe('Reporter CSV output', () => {
+  it('writes one row per step with curated columns', async () => {
+    const cfg = makeConfig({outDir: dir});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    r.addStep(stepResult(10, 20));
+    r.addStep(stepResult(20, 40));
+    const paths = await r.write();
+    const csv = readFileSync(paths.csv, 'utf8');
+    const lines = csv.trim().split('\n');
+    expect(lines[0]).toBe('step,p50,p95,p99,max,throughput_csps,cpu_user,evloop_p95_ms,rss_mb,users,errors,break');
+    expect(lines[1]!.split(',')[0]).toBe('10');
+    expect(lines[1]!.split(',')[1]).toBe('20');
+    expect(lines[2]!.split(',')[0]).toBe('20');
+  });
+
+  it('emits empty cells when a metric is missing', async () => {
+    const cfg = makeConfig({outDir: dir});
+    const r = new Reporter({outDir: dir, runMeta: meta(), config: cfg});
+    const s = stepResult(10, 20);
+    s.snapshot.gauges = {}; // strip all gauges
+    r.addStep(s);
+    const paths = await r.write();
+    const csv = readFileSync(paths.csv, 'utf8');
+    const cols = csv.trim().split('\n')[1]!.split(',');
+    // step,p50,p95,p99,max,throughput_csps,<cpu_user>,<evloop_p95_ms>,<rss_mb>,<users>,errors,break
+    expect(cols[6]).toBe(''); // cpu_user missing
+    expect(cols[7]).toBe(''); // evloop missing
+    expect(cols[8]).toBe(''); // rss missing
+    expect(cols[9]).toBe(''); // users missing
+  });
+});
