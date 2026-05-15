@@ -10,18 +10,31 @@ import type {Sample} from '../../src/sim/types.js';
 
 class StubAuthor extends EventEmitter {
   static instances: StubAuthor[] = [];
+  static failNext = 0; // next N connect() calls will reject
+  started = false;
+  stopped = false;
+  authorName: string;
   private samples: Sample[] = [];
   private errs = 0;
-  constructor() { super(); StubAuthor.instances.push(this); }
-  async connect(): Promise<void> {}
-  start(): void {}
-  async stop(): Promise<void> {}
+  constructor(authorName = 't') {
+    super();
+    this.authorName = authorName;
+    StubAuthor.instances.push(this);
+  }
+  async connect(): Promise<void> {
+    if (StubAuthor.failNext > 0) {
+      StubAuthor.failNext--;
+      throw new Error('stub connect failure');
+    }
+  }
+  start(): void { this.started = true; }
+  async stop(): Promise<void> { this.stopped = true; }
   drainSamples(): Sample[] { const o = this.samples; this.samples = []; return o; }
   getErrors(): number { return this.errs; }
   /** Test helper: push synthetic samples. */
   inject(ms: number, n = 1): void {
     for (let i = 0; i < n; i++) {
-      this.samples.push({authorId: 't', sentAtNs: 0n, ackedAtNs: 0n, latencyMs: ms});
+      this.samples.push({authorId: this.authorName, sentAtNs: 0n, ackedAtNs: 0n, latencyMs: ms});
     }
   }
 }
@@ -34,9 +47,11 @@ class StubScraper {
   }
 }
 
+const resetStubs = (): void => { StubAuthor.instances = []; StubAuthor.failNext = 0; };
+
 describe('Harness.run sweep', () => {
   it('produces one StepResult per swept step, with percentiles from drained samples', async () => {
-    StubAuthor.instances = [];
+    resetStubs();
     vi.useFakeTimers();
     const dir = mkdtempSync(join(tmpdir(), 'h-'));
     try {
@@ -45,7 +60,7 @@ describe('Harness.run sweep', () => {
         sweep: {axis: 'authors', min: 1, max: 2, step: 1, warmupMs: 10, dwellMs: 20},
       });
       const h = new Harness(cfg, new StubScraper() as never,
-                            { authorFactory: () => new StubAuthor() as never });
+                            { authorFactory: (o) => new StubAuthor(o.authorName) as never });
       const runPromise = h.run();
       // Step 1: 1 author. Drain warmup, then inject samples in dwell window.
       await vi.advanceTimersByTimeAsync(11);
@@ -69,7 +84,7 @@ describe('Harness.run sweep', () => {
 
 describe('Harness breakage thresholds', () => {
   it('flags a step when p95 exceeds break.p95Ms', async () => {
-    StubAuthor.instances = [];
+    resetStubs();
     vi.useFakeTimers();
     const dir = mkdtempSync(join(tmpdir(), 'h-'));
     try {
@@ -79,7 +94,7 @@ describe('Harness breakage thresholds', () => {
         breakP95Ms: 50,
       });
       const h = new Harness(cfg, new StubScraper() as never,
-                            { authorFactory: () => new StubAuthor() as never });
+                            { authorFactory: (o) => new StubAuthor(o.authorName) as never });
       const p = h.run();
       await vi.advanceTimersByTimeAsync(2);
       StubAuthor.instances.forEach((a) => a.inject(100, 10));
@@ -92,7 +107,7 @@ describe('Harness breakage thresholds', () => {
   });
 
   it('continues past breakage by default (action=continue)', async () => {
-    StubAuthor.instances = [];
+    resetStubs();
     vi.useFakeTimers();
     const dir = mkdtempSync(join(tmpdir(), 'h-'));
     try {
@@ -102,7 +117,7 @@ describe('Harness breakage thresholds', () => {
         breakP95Ms: 50,
       });
       const h = new Harness(cfg, new StubScraper() as never,
-                            { authorFactory: () => new StubAuthor() as never });
+                            { authorFactory: (o) => new StubAuthor(o.authorName) as never });
       const p = h.run();
       for (let i = 0; i < 2; i++) {
         await vi.advanceTimersByTimeAsync(2);
@@ -111,6 +126,66 @@ describe('Harness breakage thresholds', () => {
       }
       const report = await p;
       expect(report.steps).toHaveLength(2);
+    } finally {
+      rmSync(dir, {recursive: true, force: true});
+    }
+  });
+});
+
+describe('Harness lurkers', () => {
+  it('spawns cfg.lurkers connected-but-idle authors at run start', async () => {
+    resetStubs();
+    vi.useFakeTimers();
+    const dir = mkdtempSync(join(tmpdir(), 'h-'));
+    try {
+      const cfg = makeConfig({
+        outDir: dir,
+        lurkers: 3,
+        sweep: {axis: 'authors', min: 1, max: 1, step: 1, warmupMs: 1, dwellMs: 10},
+      });
+      const h = new Harness(cfg, new StubScraper() as never,
+                            { authorFactory: (o) => new StubAuthor(o.authorName) as never });
+      const p = h.run();
+      await vi.advanceTimersByTimeAsync(15);
+      await p;
+      // 3 lurkers + 1 author
+      expect(StubAuthor.instances.length).toBe(4);
+      const lurkers = StubAuthor.instances.filter((a) => a.authorName.startsWith('l'));
+      const authors = StubAuthor.instances.filter((a) => a.authorName.startsWith('a'));
+      expect(lurkers).toHaveLength(3);
+      expect(authors).toHaveLength(1);
+      // Lurkers connect but never start() — they only hold sockets
+      lurkers.forEach((l) => expect(l.started).toBe(false));
+      authors.forEach((a) => expect(a.started).toBe(true));
+      // All stopped at cleanup
+      [...lurkers, ...authors].forEach((a) => expect(a.stopped).toBe(true));
+    } finally {
+      rmSync(dir, {recursive: true, force: true});
+    }
+  });
+});
+
+describe('Harness allSettled spawn', () => {
+  it('records failed author connects as droppedAuthors and keeps sweeping', async () => {
+    resetStubs();
+    StubAuthor.failNext = 1; // first author of step 1 fails to connect
+    vi.useFakeTimers();
+    const dir = mkdtempSync(join(tmpdir(), 'h-'));
+    try {
+      const cfg = makeConfig({
+        outDir: dir,
+        sweep: {axis: 'authors', min: 2, max: 2, step: 2, warmupMs: 1, dwellMs: 10},
+      });
+      const h = new Harness(cfg, new StubScraper() as never,
+                            { authorFactory: (o) => new StubAuthor(o.authorName) as never });
+      const p = h.run();
+      await vi.advanceTimersByTimeAsync(15);
+      const report = await p;
+      expect(report.steps).toHaveLength(1);
+      expect(report.steps[0]!.droppedAuthors).toBe(1);
+      // The author that DID connect was the only one that contributed
+      const live = StubAuthor.instances.filter((a) => a.started);
+      expect(live).toHaveLength(1);
     } finally {
       rmSync(dir, {recursive: true, force: true});
     }
