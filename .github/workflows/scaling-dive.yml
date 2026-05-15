@@ -59,7 +59,9 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 11.1.2  # matches etherpad core's packageManager pin; required because no package.json sits at the runner root in this workflow
+          # Matches backend-tests.yml. pnpm 11.x rejects the load-test lockfile's
+          # `autoInstallPeers: false` setting; 10.33.2 handles both repos' lockfiles.
+          version: 10.33.2
           run_install: false
 
       - name: Get pnpm store directory
