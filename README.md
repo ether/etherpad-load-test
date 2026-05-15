@@ -32,6 +32,23 @@ You should modify your tests to your use case.
 - ``etherpad-loadtest -d 60`` (Test for 60 seconds)
 - ``etherpad-loadtest -l 50 -a 10`` (Test with 50 lurkers and 10 authors)
 
+### Sweep mode
+
+For producing reproducible concurrency curves:
+
+`etherpad-loadtest --sweep authors=10..200:step=10:dwell=30s:warmup=5s --report ./out`
+
+Outputs `report.json`, `report.csv`, `report.md` in the report directory.
+The CSV is plot-ready; the MD is paste-ready for issues.
+
+Additional flags:
+- `--scrape-url`, `--scrape-interval`, `--scrape-keep` — control `/stats/prometheus` polling
+- `--break-p95`, `--break-evloop-p95`, `--break-error-rate`, `--break-action stop|continue`
+- `--keep-raw-samples`, `--json-only`, `--run-id`, `--force`, `--respawn-drops`
+- `--edit-interval`, `--connect-timeout` — accept duration strings (`200ms`, `30s`, `5m`)
+
+Legacy invocation (`-l`, `-a`, `-d`) is unchanged.
+
 ### Testing multiple pads at once
 ``etherpad-loadtest-multi [<num of pads>]`` (default is 10 pads)
 

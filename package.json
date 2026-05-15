@@ -10,19 +10,24 @@
   },
   "contributors": [],
   "dependencies": {
-    "etherpad-cli-client": "^4.0.2"
+    "etherpad-cli-client": "^4.0.2",
+    "hdr-histogram-js": "^3.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@types/node": "^20.12.7",
+    "@types/node": "^20",
     "eslint": "^9.32.0",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.2",
+    "vitest": "^2.1.9"
   },
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "test": "vitest run --exclude '**/integration.test.ts' --exclude '**/legacy-contract.test.ts'",
+    "test:integration": "vitest run tests/sim/integration.test.ts tests/sim/legacy-contract.test.ts",
+    "test:watch": "vitest"
   },
   "engines": {
     "node": ">=18.0.0"
