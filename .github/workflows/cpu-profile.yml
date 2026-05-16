@@ -1,0 +1,163 @@
+name: CPU profile capture
+
+# One-shot V8 CPU profile capture for the SUT during a scaling-dive sweep.
+# Used to answer "where do CPU cycles go at the cliff?" (#7756). Adds
+# profiling overhead (~10-30%) so artifacts shouldn't be compared
+# directly against the no-profile dive numbers; the cpuprofile is the
+# deliverable, not the report.
+
+on:
+  workflow_dispatch:
+    inputs:
+      core_ref:
+        description: 'ether/etherpad ref to test against'
+        default: 'develop'
+        type: string
+      sweep:
+        description: 'sweep spec to drive load while profiling'
+        default: 'authors=100..400:step=50:dwell=10s:warmup=3s'
+        type: string
+      settings_lever:
+        description: 'which dive lever to apply to settings (or "none")'
+        default: 'none'
+        type: choice
+        options: [none, new-changes-batch, engine-flush-defer]
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+
+    steps:
+      - name: Checkout etherpad-load-test
+        uses: actions/checkout@v4
+        with:
+          path: ./loadtest
+
+      - name: Checkout etherpad core (${{ inputs.core_ref }})
+        uses: actions/checkout@v4
+        with:
+          repository: ether/etherpad
+          ref: ${{ inputs.core_ref }}
+          path: ./etherpad
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 10.33.2
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Build and link etherpad-load-test
+        run: |
+          cd ./loadtest
+          pnpm install --frozen-lockfile
+          pnpm run build
+          pnpm link --global
+
+      - name: Install Etherpad core dependencies
+        run: |
+          cd ./etherpad
+          pnpm install --frozen-lockfile
+
+      - name: Patch settings.json
+        working-directory: ./etherpad
+        run: |
+          sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 100000000/' -i settings.json.template
+          sed -e '
+            s!"loadTest":[^,]*!"loadTest": true!
+            s!"points":[^,]*!"points": 1000000!
+          ' settings.json.template > settings.json
+          sed -i '/"loadTest": true,/a\  "scalingDiveMetrics": true,' settings.json
+
+          case "${{ inputs.settings_lever }}" in
+            none) echo "no lever applied — baseline" ;;
+            new-changes-batch)
+              sed -i '/"loadTest": true,/a\  "newChangesBatch": true,' settings.json
+              grep newChangesBatch settings.json
+              ;;
+            engine-flush-defer)
+              sed -i '/"loadTest": true,/a\  "engineFlushDefer": true,' settings.json
+              grep engineFlushDefer settings.json
+              ;;
+            *) echo "unknown lever"; exit 1 ;;
+          esac
+
+      - name: Start Etherpad with --cpu-prof
+        working-directory: ./etherpad
+        run: |
+          mkdir -p /tmp/cpuprof
+          # --cpu-prof writes the profile when the process exits OR receives
+          # SIGUSR2. Profile filename has a pid suffix, so we use a known
+          # directory and grab whatever lands.
+          export NODE_OPTIONS="--cpu-prof --cpu-prof-dir=/tmp/cpuprof --cpu-prof-name=etherpad.cpuprofile"
+          (cd src && pnpm run prod >../ep.log 2>&1 &)
+          for i in $(seq 1 90); do
+            curl -sf http://127.0.0.1:9001/ >/dev/null && break
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:9001/ >/dev/null || { echo "Etherpad failed to start"; tail -n 100 ep.log; exit 1; }
+          echo "Etherpad up with cpu-prof; NODE_OPTIONS=$NODE_OPTIONS"
+
+      - name: Run sweep
+        working-directory: ./loadtest
+        run: |
+          mkdir -p ./out
+          etherpad-loadtest \
+            http://127.0.0.1:9001 \
+            --sweep "${{ inputs.sweep }}" \
+            --report ./out \
+            --run-id "cpu-profile-$(echo '${{ inputs.core_ref }}' | tr '/' '-')" \
+            --force
+
+      - name: Stop Etherpad cleanly (flushes the cpuprofile to disk)
+        if: always()
+        run: |
+          # SIGTERM the node process running server.ts so Node writes the
+          # .cpuprofile during clean shutdown. SIGKILL would lose it.
+          pkill -SIGTERM -f 'node.*server\.ts' || true
+          # Give Node up to 20s to write the profile.
+          for i in $(seq 1 20); do
+            ls /tmp/cpuprof/*.cpuprofile 2>/dev/null && break
+            sleep 1
+          done
+          ls -la /tmp/cpuprof || true
+          echo '--- ep.log tail ---'
+          tail -n 80 ./etherpad/ep.log || true
+
+      - name: Upload CPU profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpuprofile-${{ inputs.settings_lever }}
+          path: /tmp/cpuprof/*.cpuprofile
+          if-no-files-found: error
+
+      - name: Upload sweep report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpuprofile-report-${{ inputs.settings_lever }}
+          path: loadtest/out/
+          if-no-files-found: warn
