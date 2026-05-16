@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lever: [baseline, websocket-only, nodemem, new-changes-batch]
+        lever: [baseline, websocket-only, nodemem, new-changes-batch, engine-packing]
 
     env:
       PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
@@ -133,6 +133,15 @@ jobs:
               # per recipient. Requires the core_ref to include ether/etherpad#7768.
               sed -i '/"loadTest": true,/a\  "newChangesBatch": true,' settings.json
               grep newChangesBatch settings.json || { echo "newChangesBatch not present — core must include #7768"; exit 1; }
+              ;;
+            engine-packing)
+              # Lever 8: engine.io WS transport-level packing. When the
+              # engine.io socket has >1 packets buffered, send them as ONE
+              # WS frame containing the payload-encoded multi-packet
+              # bundle instead of one frame per packet. Requires the
+              # core_ref to include feat/engine-io-ws-packing.
+              sed -i '/"loadTest": true,/a\  "enginePacking": true,' settings.json
+              grep enginePacking settings.json || { echo "enginePacking not present — core must include feat/engine-io-ws-packing"; exit 1; }
               ;;
             *)
               echo "unknown lever: ${{ matrix.lever }}" >&2
