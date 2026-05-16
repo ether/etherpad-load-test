@@ -33,7 +33,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        lever: [baseline, websocket-only, nodemem, new-changes-batch, engine-packing]
+        lever: [baseline, websocket-only, nodemem, new-changes-batch, engine-packing, engine-flush-defer]
 
     env:
       PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
@@ -142,6 +142,17 @@ jobs:
               # core_ref to include feat/engine-io-ws-packing.
               sed -i '/"loadTest": true,/a\  "enginePacking": true,' settings.json
               grep enginePacking settings.json || { echo "enginePacking not present — core must include feat/engine-io-ws-packing"; exit 1; }
+              ;;
+            engine-flush-defer)
+              # Lever 8b: defer engine.io socket flush onto next microtask
+              # so multiple sendPacket calls in the same task accumulate in
+              # writeBuffer before drain. Pairs with the existing
+              # transport.send([packets]) fast path — at high emit rate the
+              # batch sees N > 1 packets where the legacy path almost
+              # always saw 1. Requires core_ref to include
+              # feat/engine-io-flush-deferral.
+              sed -i '/"loadTest": true,/a\  "engineFlushDefer": true,' settings.json
+              grep engineFlushDefer settings.json || { echo "engineFlushDefer not present — core must include feat/engine-io-flush-deferral"; exit 1; }
               ;;
             *)
               echo "unknown lever: ${{ matrix.lever }}" >&2
