@@ -94,9 +94,18 @@ jobs:
         run: |
           # Base settings.json: loadTest=true, relaxed rate limit, big import buffer.
           sed -e '/^ *"importExportRateLimiting":/,/^ *\}/ s/"max":.*/"max": 100000000/' -i settings.json.template
+          # Defang commitRateLimiting for the dive. NODE_ENV=production enables
+          # Etherpad's per-IP rate limit (handleMessage rate-limits every msg
+          # including CLIENT_READY). With harness + SUT colocated, ALL N simulated
+          # authors share one source IP (127.0.0.1), so the per-IP bucket fires
+          # at N * editRate. At authors=250 and editRate=5/s that's 1250/s and
+          # the bucket trips on every new joiner's CLIENT_READY → disconnect:
+          # rateLimited → 250 "errors" at step 250 — the false cliff we kept
+          # seeing. Raise the ceiling well above any sweep we run; real
+          # deployments with many IPs aren't affected.
           sed -e '
             s!"loadTest":[^,]*!"loadTest": true!
-            s!"points":[^,]*!"points": 1000!
+            s!"points":[^,]*!"points": 1000000!
           ' settings.json.template > settings.json
 
           # Enable the scaling-dive metrics added in ether/etherpad#7762.
