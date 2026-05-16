@@ -1,6 +1,14 @@
 import {EventEmitter} from 'node:events';
 import {connect} from 'etherpad-cli-client';
 import type {Sample} from './types.js';
+import {installEnginePackingClientPatch} from './engine-packing-client-patch.js';
+
+// Forward-compat with servers that have settings.enginePacking enabled
+// (ether/etherpad#7756 lever 8). Applied once at module load so any Author
+// constructed afterwards uses the patched engine.io-client transport.
+// Safe against legacy servers — a single-packet frame contains no `\x1e`,
+// so the patch's discriminator preserves the original code path.
+installEnginePackingClientPatch();
 
 export interface PadLike extends EventEmitter {
   append(s: string): void;
