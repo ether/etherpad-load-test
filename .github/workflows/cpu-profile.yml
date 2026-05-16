@@ -108,10 +108,15 @@ jobs:
         working-directory: ./etherpad
         run: |
           mkdir -p /tmp/cpuprof
-          # --cpu-prof writes the profile when the process exits OR receives
-          # SIGUSR2. Profile filename has a pid suffix, so we use a known
-          # directory and grab whatever lands.
-          export NODE_OPTIONS="--cpu-prof --cpu-prof-dir=/tmp/cpuprof --cpu-prof-name=etherpad.cpuprofile"
+          # --cpu-prof writes a separate profile per Node process when the
+          # process exits OR receives SIGUSR2. We deliberately omit
+          # --cpu-prof-name so each process gets a unique pid-suffixed
+          # filename (CPU.<date>.<pid>.<seq>.<n>.cpuprofile). pnpm's prod
+          # script chains pnpm → cross-env → node → tsx → server.ts;
+          # NODE_OPTIONS is inherited by all of them, so we expect 2-4
+          # separate cpuprofile files in /tmp/cpuprof — we'll keep the
+          # largest one (the long-running SUT) when analysing.
+          export NODE_OPTIONS="--cpu-prof --cpu-prof-dir=/tmp/cpuprof"
           (cd src && pnpm run prod >../ep.log 2>&1 &)
           for i in $(seq 1 90); do
             curl -sf http://127.0.0.1:9001/ >/dev/null && break
@@ -119,6 +124,10 @@ jobs:
           done
           curl -sf http://127.0.0.1:9001/ >/dev/null || { echo "Etherpad failed to start"; tail -n 100 ep.log; exit 1; }
           echo "Etherpad up with cpu-prof; NODE_OPTIONS=$NODE_OPTIONS"
+          # Record the SUT pid so the upload step can prefer it later if
+          # multiple cpuprofiles land.
+          pgrep -f 'node.*server\.ts' -n > /tmp/cpuprof/sut.pid || true
+          cat /tmp/cpuprof/sut.pid 2>/dev/null || echo "(could not capture sut pid)"
 
       - name: Run sweep
         working-directory: ./loadtest
@@ -142,7 +151,17 @@ jobs:
             ls /tmp/cpuprof/*.cpuprofile 2>/dev/null && break
             sleep 1
           done
+          echo '--- /tmp/cpuprof contents ---'
           ls -la /tmp/cpuprof || true
+          # Surface the per-file sizes so the analyst can spot the SUT
+          # quickly: the longest-running process produces the largest
+          # cpuprofile (samples accumulate over time).
+          for f in /tmp/cpuprof/*.cpuprofile; do
+            [ -f "$f" ] || continue
+            echo "  $(stat -c '%s bytes' "$f") $(basename "$f")"
+          done
+          echo '--- sut.pid ---'
+          cat /tmp/cpuprof/sut.pid 2>/dev/null || true
           echo '--- ep.log tail ---'
           tail -n 80 ./etherpad/ep.log || true
 
