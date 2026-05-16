@@ -104,30 +104,39 @@ jobs:
             *) echo "unknown lever"; exit 1 ;;
           esac
 
-      - name: Start Etherpad with --cpu-prof
+      - name: Start Etherpad with --cpu-prof (bypassing pnpm/cross-env wrappers)
         working-directory: ./etherpad
         run: |
           mkdir -p /tmp/cpuprof
-          # --cpu-prof writes a separate profile per Node process when the
-          # process exits OR receives SIGUSR2. We deliberately omit
-          # --cpu-prof-name so each process gets a unique pid-suffixed
-          # filename (CPU.<date>.<pid>.<seq>.<n>.cpuprofile). pnpm's prod
-          # script chains pnpm → cross-env → node → tsx → server.ts;
-          # NODE_OPTIONS is inherited by all of them, so we expect 2-4
-          # separate cpuprofile files in /tmp/cpuprof — we'll keep the
-          # largest one (the long-running SUT) when analysing.
-          export NODE_OPTIONS="--cpu-prof --cpu-prof-dir=/tmp/cpuprof"
-          (cd src && pnpm run prod >../ep.log 2>&1 &)
+          # Previous attempt (PR #110) wrapped `pnpm run prod` with NODE_OPTIONS=--cpu-prof.
+          # That produced 5 cpuprofile files — one for each Node in the chain
+          # (pnpm, cross-env wrapper, tsx) — and the SUT process was the
+          # newest match for `node.*server\.ts` (tsx loader) but came back
+          # 99.8% idle while another process pegged CPU. The wrapper chain
+          # made it impossible to know which file held the actual server
+          # samples.
+          #
+          # Fix: invoke node DIRECTLY (same command the prod script runs,
+          # minus pnpm + cross-env), so there's exactly one Node process
+          # under --cpu-prof and it IS the SUT. NODE_ENV is set inline
+          # instead of via cross-env.
+          cd src
+          NODE_ENV=production node \
+            --cpu-prof --cpu-prof-dir=/tmp/cpuprof \
+            --require tsx/cjs \
+            node/server.ts >../ep.log 2>&1 &
+          SUT_PID=$!
+          echo "$SUT_PID" > /tmp/cpuprof/sut.pid
+          echo "SUT pid: $SUT_PID"
+          cd ..
           for i in $(seq 1 90); do
             curl -sf http://127.0.0.1:9001/ >/dev/null && break
+            # Bail out early if the SUT died during boot.
+            kill -0 "$SUT_PID" 2>/dev/null || { echo "SUT exited during boot"; tail -n 100 ep.log; exit 1; }
             sleep 1
           done
           curl -sf http://127.0.0.1:9001/ >/dev/null || { echo "Etherpad failed to start"; tail -n 100 ep.log; exit 1; }
-          echo "Etherpad up with cpu-prof; NODE_OPTIONS=$NODE_OPTIONS"
-          # Record the SUT pid so the upload step can prefer it later if
-          # multiple cpuprofiles land.
-          pgrep -f 'node.*server\.ts' -n > /tmp/cpuprof/sut.pid || true
-          cat /tmp/cpuprof/sut.pid 2>/dev/null || echo "(could not capture sut pid)"
+          echo "Etherpad up; SUT pid $SUT_PID under --cpu-prof"
 
       - name: Run sweep
         working-directory: ./loadtest
@@ -143,9 +152,16 @@ jobs:
       - name: Stop Etherpad cleanly (flushes the cpuprofile to disk)
         if: always()
         run: |
-          # SIGTERM the node process running server.ts so Node writes the
+          # SIGTERM the SUT pid we recorded at boot so Node writes the
           # .cpuprofile during clean shutdown. SIGKILL would lose it.
-          pkill -SIGTERM -f 'node.*server\.ts' || true
+          SUT_PID=$(cat /tmp/cpuprof/sut.pid 2>/dev/null || true)
+          if [ -n "$SUT_PID" ] && kill -0 "$SUT_PID" 2>/dev/null; then
+            echo "SIGTERM SUT pid $SUT_PID"
+            kill -SIGTERM "$SUT_PID"
+          else
+            echo "SUT pid $SUT_PID not alive; trying pkill fallback"
+            pkill -SIGTERM -f 'node.*server\.ts' || true
+          fi
           # Give Node up to 20s to write the profile.
           for i in $(seq 1 20); do
             ls /tmp/cpuprof/*.cpuprofile 2>/dev/null && break
