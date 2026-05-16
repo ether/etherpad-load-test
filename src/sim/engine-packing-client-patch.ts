@@ -24,10 +24,15 @@
 
 import {createRequire} from 'node:module';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 
 let installed = false;
 
-const HARNESS_ROOT = path.resolve(__dirname, '../..');
+// ESM-friendly equivalents of __dirname / __filename. The harness is ESM
+// (package.json "type": "module"), so the CJS globals don't exist.
+const HERE_FILE = fileURLToPath(import.meta.url);
+const HERE_DIR = path.dirname(HERE_FILE);
+const HARNESS_ROOT = path.resolve(HERE_DIR, '../..');
 const ENGINE_IO_CLIENT_PATH = path.join(
   HARNESS_ROOT,
   'node_modules/.pnpm/engine.io-client@6.6.4/node_modules/engine.io-client/build/cjs/transport.js',
@@ -37,7 +42,7 @@ const ENGINE_IO_PARSER_PATH = path.join(
   'node_modules/.pnpm/engine.io-parser@5.2.3/node_modules/engine.io-parser/build/cjs/index.js',
 );
 
-const req = createRequire(__filename);
+const req = createRequire(HERE_FILE);
 
 export const installEnginePackingClientPatch = (): void => {
   if (installed) return;
