@@ -204,7 +204,7 @@ jobs:
 
       - name: Upload report artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scaling-dive-${{ matrix.lever }}
           path: |
@@ -215,7 +215,7 @@ jobs:
 
       - name: Upload Etherpad log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ep-log-${{ matrix.lever }}
           path: etherpad/ep.log

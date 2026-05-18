@@ -183,7 +183,7 @@ jobs:
 
       - name: Upload CPU profile
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpuprofile-${{ inputs.settings_lever }}
           path: /tmp/cpuprof/*.cpuprofile
@@ -191,7 +191,7 @@ jobs:
 
       - name: Upload sweep report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cpuprofile-report-${{ inputs.settings_lever }}
           path: loadtest/out/
