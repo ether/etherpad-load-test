@@ -18,7 +18,7 @@
     "@types/node": "^20",
     "eslint": "^9.32.0",
     "typescript": "^5.4.2",
-    "vitest": "^2.1.9"
+    "vitest": "^3.2.6"
   },
   "scripts": {
     "build": "tsc",
