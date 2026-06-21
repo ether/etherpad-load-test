@@ -78,6 +78,14 @@ jobs:
           # The previous step (runnerLoadTest.sh) tore Etherpad down, so
           # bring a minimal one back up just for the sweep integration test.
           cd ./etherpad
+          # The sweep drives 2..4 authors from a single IP (127.0.0.1). Core's
+          # default commitRateLimiting is 10 changes/s/IP, so the 4-author step
+          # (~20 changes/s) trips the limiter; a rate-limited USER_CHANGES never
+          # gets an ACCEPT_COMMIT, which stalls the cli-client's in-flight slot
+          # and zeroes out that step's latency samples. Raise the cap for the
+          # SUT so we measure throughput, not the rate limiter (mirrors the
+          # importExportRateLimiting bump runnerLoadTest.sh already applies).
+          sed -e '/^ *"commitRateLimiting":/,/^ *\}/ s/"points":.*/"points": 1000000/' -i settings.json
           (cd src && pnpm run prod &)
           for i in $(seq 1 60); do
             curl -sf http://127.0.0.1:9001/ >/dev/null && break
