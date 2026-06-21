@@ -16,12 +16,12 @@ jobs:
 
     steps:
       - name: Check out etherpad-load-test
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: ./loadtest
 
       - name: Check out Etherpad core
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ether/etherpad-lite
           path: ./etherpad
