@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       etherpad-cli-client:
-        specifier: ^4.0.2
-        version: 4.0.2
+        specifier: ^4.0.3
+        version: 4.0.3
       hdr-histogram-js:
         specifier: ^3.0.1
         version: 3.0.1
@@ -619,8 +619,8 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
-  etherpad-cli-client@4.0.2:
-    resolution: {integrity: sha512-oAyJxJj4UH0AAEmMPpMiTHKd2IT14OWnKaPzWTqLh3BJ8nyEv/IAMA5scAGjet0xKNERm+k7VSnfeJQvN4adKQ==}
+  etherpad-cli-client@4.0.3:
+    resolution: {integrity: sha512-nQt5FxpmfQHwJ546TJXKMT4fMIS1crvU+NvHAypfboHTsbFQMIPOu4ZANSirRzE1lYnH4APUBDwMQqlKeQt9rw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -1562,7 +1562,7 @@ snapshots:
 
   esutils@2.0.3: {}
 
-  etherpad-cli-client@4.0.2:
+  etherpad-cli-client@4.0.3:
     dependencies:
       socket.io-client: 4.8.3
       superagent: 10.3.0
