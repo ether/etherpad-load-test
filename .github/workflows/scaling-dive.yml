@@ -56,7 +56,7 @@ jobs:
         with:
           node-version: 25
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6.0.9
         name: Install pnpm
         with:
           # Matches backend-tests.yml. pnpm 11.x rejects the load-test lockfile's
