@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 20
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         name: Install pnpm
         with:
           version: 10.33.2
@@ -65,7 +65,7 @@ jobs:
           node-version: 20
           registry-url: https://registry.npmjs.org/
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         name: Install pnpm
         with:
           version: 10.33.2

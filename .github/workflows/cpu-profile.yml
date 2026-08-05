@@ -51,7 +51,7 @@ jobs:
         with:
           node-version: 25
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         name: Install pnpm
         with:
           version: 10.33.2
